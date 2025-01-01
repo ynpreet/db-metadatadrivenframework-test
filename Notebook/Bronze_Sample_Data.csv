@@ -1,0 +1,4 @@
+id,name,age,email,created_at
+1,John,30,john@example.com,2024-12-01
+2,Jane,25,jane@example.com,2024-12-02
+3,Doe,35,doe@example.com,2024-12-03

@@ -1,0 +1,6 @@
+id,source_column,target_column,source_data_type,target_data_type,is_active,load_type
+1,id,id,INT,INT,True,incremental
+2,name,name,STRING,STRING,True,incremental
+3,age,age,INT,INT,True,incremental
+4,email,email,STRING,STRING,True,incremental
+5,created_at,created_at,DATE,TIMESTAMP,True,incremental
