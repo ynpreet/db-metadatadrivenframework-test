@@ -53,6 +53,8 @@ def bronze_to_silver_table(table_name):
 
     # Prepare column mapping
     column_mapping = {row["source_column_name"]: row["target_column_name"] for row in active_columns}
+    # print(column_mapping)
+    print(f"Column mapping created {column_mapping}")
 
     # Read source table data
     source_table_full_name = f"{source_schema_name}.{source_table_name}"
@@ -113,24 +115,22 @@ def bronze_to_silver_table(table_name):
 
 # COMMAND ----------
 
-bronze_to_silver_table('circuits')
+
 bronze_to_silver_table('allergy')
 
 # COMMAND ----------
 
-
-
-# COMMAND ----------
-
-
+# MAGIC %sql
+# MAGIC select * from silver.allergy
 
 # COMMAND ----------
 
-
+bronze_to_silver_table('circuits')
 
 # COMMAND ----------
 
-
+# MAGIC %sql
+# MAGIC select * from silver.circuits
 
 # COMMAND ----------
 
