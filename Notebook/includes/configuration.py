@@ -23,6 +23,14 @@ silver_control_table_path = f"abfss://{silver_container_name}@{silver_storage_ac
 
 # COMMAND ----------
 
+silver_storage_account_name = "adlsgen2mdftest"
+silver_container_name = "control-tables"
+silver_folder_path = "metadata"
+meta_source_to_target_table_file_name = "meta_source_to_target_table.csv"
+meta_source_to_target_table_path = f"abfss://{silver_container_name}@{silver_storage_account_name}.dfs.core.windows.net/{silver_folder_path}/{meta_source_to_target_table_file_name}"
+
+# COMMAND ----------
+
 #importing all libraries
 from pyspark.sql.types import *
 from pyspark.sql.functions import *
