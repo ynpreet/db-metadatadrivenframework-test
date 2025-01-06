@@ -1,0 +1,75 @@
+DataEngineeringProject/
+│
+├── includes/
+│   ├── common_functions
+│   │   └── (Notebook) common_functions
+│   │       - Purpose: 
+│   │         1. Define reusable PySpark functions for each stage of the data pipeline:
+│   │            - Source → Landing
+│   │            - Landing → Bronze
+│   │            - Bronze → Silver
+│   │            - Silver → Gold
+│   │         2. Facilitate uniform transformation logic so that all stages call the same set of functions.
+│   │
+│   └── configuration
+│       └── (Notebook) configuration
+│           - Purpose:
+│             1. Store all project configurations (file paths, table names, schema/catalog details, etc.).
+│             2. Create or update catalogs and schemas in your metastore.
+│             3. Load config data (currently in CSVs) and persist them into Delta tables.
+│             4. Create or initialize Delta tables for logging and audit (e.g., job status, record counts).
+│
+├── ingestion/
+│   └── (Notebook) source_to_landing
+│       - Purpose:
+│         1. Ingest data from source systems (files, databases, APIs) into the "landing" zone.
+│         2. Use the `common_functions` from the `includes/` folder to perform the ingestion.
+│         3. Refer to the `configuration` notebook for paths, table names, etc.
+│
+├── bronze/
+│   └── (Notebook) landing_to_bronze
+│       - Purpose:
+│         1. Move raw data from the landing zone into the "bronze" layer.
+│         2. Optionally perform basic data cleanup or validations.
+│         3. Leverage the ingestion functions defined in `common_functions`.
+│
+├── silver/
+│   ├── (Notebook) bronze_to_silver
+│   │   - Purpose:
+│   │     1. Orchestrate transformations from the "bronze" layer to the "silver" layer.
+│   │     2. Call and chain logic from `common_functions` for standardized transformations.
+│   │     3. Aggregate or enrich data where needed before persisting in the silver layer.
+│   │
+│   ├── (Notebook) business_logic_for_tableA
+│   │   - Purpose:
+│   │     1. Contain specific transformation rules or business logic for “Table A” in the silver layer.
+│   │     2. Called by or referenced in `bronze_to_silver` for that particular table’s transformation flow.
+│   │
+│   └── (Notebook) business_logic_for_tableB
+│       - Purpose:
+│         1. Similar to `business_logic_for_tableA` but for “Table B” or any other domain-specific logic.
+│         2. Keep separate notebooks for clarity and maintainability.
+│
+├── gold/
+│   ├── (Notebook) silver_to_gold
+│   │   - Purpose:
+│   │     1. Move cleansed and conformed data from the silver layer to the “gold” layer.
+│   │     2. Use functions in `common_functions` for consistent transformations.
+│   │     3. Finalize data in a presentation-ready format (wide tables, star schemas, etc.).
+│   │
+│   ├── (Notebook) business_logic_for_tableX
+│   │   - Purpose:
+│   │     1. Define specialized or advanced transformations needed to populate “Table X” in the gold layer.
+│   │     2. Keep logic modular and separate from other gold transformations for easier maintenance.
+│   │
+│   └── (Notebook) business_logic_for_tableY
+│       - Purpose:
+│         1. Similar to `business_logic_for_tableX`, used for “Table Y” or any specific domain logic.
+│         2. Called by `silver_to_gold` when building/updating gold tables.
+│
+└── RCO_DW/
+    └── (Notebook) gold_to_RCO_DW
+        - Purpose:
+          1. Extract data from the gold layer and load it into the RCO_DW (Data Warehouse) schema.
+          2. May include additional transformations specific to how RCO_DW is structured.
+          3. Use the `common_functions` if a uniform load approach is possible; else define custom logic here.
