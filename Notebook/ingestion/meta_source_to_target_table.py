@@ -224,7 +224,8 @@ def meta_source_to_target_table(table_name):
             # Catch errors related to the notebook execution or missing path
             error_message = f"Error executing notebook for table {table_name}: {str(e)}"
             print(error_message)
-            raise ValueError(error_message)
+            # raise ValueError(error_message)
+            return
 
     # If Business Logic is not 1, execute the existing pipeline
     # Extract metadata details
@@ -385,8 +386,8 @@ def meta_source_to_target_table(table_name):
 
 # COMMAND ----------
 
-meta_source_to_target_table('Allergy')
-# meta_source_to_target_table('AppointmentType')
+# meta_source_to_target_table('Allergy')
+meta_source_to_target_table('AppointmentType')
 
 # COMMAND ----------
 
@@ -406,6 +407,59 @@ meta_source_to_target_table('Allergy')
 # MAGIC         VALUES (s.`Allergy Code`, s.`BUSINESS_ID`, s.`Allergy ID`, s.`Allergy Concept Type`, s.`Type`, s.`Patient ID`, s.`Allergy Name`, s.`Onset Date`, s.`Allergy Reaction Name`, s.`Created By`, s.`RxNorm Code`, s.`Created Datetime`, s.`Deactivated By`, s.`Deactivated Datetime`, s.`Deleted By`, s.`Deleted Datetime`, s.`Last Modified By`, s.`Reactivated Datetime`, s.`Reactivated By`, s.`Last Modified Datetime`, s.`Note`, s.`ETLBatchID`, s.`ETLBatchTS`, s.`ETLOriginalTS`, s.`Chart ID`, s.`CONTEXT_NAME`, s.`CONTEXT_PARENTCONTEXTID`);
 # MAGIC         
 # MAGIC Out of 0 records in Bronze.AdvMD_Allergy, 0 were inserted into the Silver.Allergy using Incremental load from EMR AdvMD.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC None
+# MAGIC Query for silver_update:  CREATE OR REPLACE TEMP VIEW silver_update AS SELECT CAST(`Allergy Code` AS INT) AS `Allergy Code`, CAST(`CONTEXT_ID` AS INT) AS `BUSINESS_ID`, CAST(`CONTEXT_NAME` AS STRING) AS `CONTEXT_NAME`, CAST(`Allergy Concept Type` AS INT) AS `Allergy Concept Type`, CAST(`Allergy ID` AS INT) AS `Allergy ID`, CAST(`CONTEXT_PARENTCONTEXTID` AS INT) AS `CONTEXT_PARENTCONTEXTID`, CAST(`Allergy Name` AS STRING) AS `Allergy Name`, CAST(`Allergy Reaction Name` AS STRING) AS `Allergy Reaction Name`, CAST(`Type` AS STRING) AS `Type`, CAST(`Patient ID` AS INT) AS `Patient ID`, CAST(`Chart ID` AS INT) AS `Chart ID`, CAST(`Created By` AS STRING) AS `Created By`, CAST(`Created Datetime` AS TIMESTAMP) AS `Created Datetime`, CAST(`RxNorm Code` AS STRING) AS `RxNorm Code`, CAST(`Deactivated By` AS STRING) AS `Deactivated By`, CAST(`Deactivated Datetime` AS TIMESTAMP) AS `Deactivated Datetime`, CAST(`Deleted By` AS STRING) AS `Deleted By`, CAST(`Onset Date` AS DATE) AS `Onset Date`, CAST(`Deleted Datetime` AS TIMESTAMP) AS `Deleted Datetime`, CAST(`Note` AS STRING) AS `Note`, CAST(`Reactivated By` AS STRING) AS `Reactivated By`, CAST(`Reactivated Datetime` AS TIMESTAMP) AS `Reactivated Datetime`, CAST(1 AS INT) AS `ETLBatchID`, CAST('2025-01-01 10:00:00' AS TIMESTAMP) AS `ETLBatchTS`, CAST('2025-01-01 10:00:00' AS TIMESTAMP) AS `ETLOriginalTS`, CAST('' AS STRING) AS `Last Modified By`, CAST('' AS TIMESTAMP) AS `Last Modified Datetime` FROM Bronze.Athena_Allergy;
+# MAGIC Merge Query:  
+# MAGIC         MERGE INTO Silver.Allergy t
+# MAGIC         USING silver_update s
+# MAGIC         ON t.`BUSINESS_ID` = s.`BUSINESS_ID` AND t.`Allergy ID` = s.`Allergy ID` AND t.`Type` = s.`Type`
+# MAGIC         WHEN MATCHED THEN
+# MAGIC         UPDATE SET
+# MAGIC             t.`Allergy Code` = s.`Allergy Code`, t.`BUSINESS_ID` = s.`BUSINESS_ID`, t.`CONTEXT_NAME` = s.`CONTEXT_NAME`, t.`Allergy Concept Type` = s.`Allergy Concept Type`, t.`Allergy ID` = s.`Allergy ID`, t.`CONTEXT_PARENTCONTEXTID` = s.`CONTEXT_PARENTCONTEXTID`, t.`Allergy Name` = s.`Allergy Name`, t.`Allergy Reaction Name` = s.`Allergy Reaction Name`, t.`Type` = s.`Type`, t.`Patient ID` = s.`Patient ID`, t.`Chart ID` = s.`Chart ID`, t.`Created By` = s.`Created By`, t.`Created Datetime` = s.`Created Datetime`, t.`RxNorm Code` = s.`RxNorm Code`, t.`Deactivated By` = s.`Deactivated By`, t.`Deactivated Datetime` = s.`Deactivated Datetime`, t.`Deleted By` = s.`Deleted By`, t.`Onset Date` = s.`Onset Date`, t.`Deleted Datetime` = s.`Deleted Datetime`, t.`Note` = s.`Note`, t.`Reactivated By` = s.`Reactivated By`, t.`Reactivated Datetime` = s.`Reactivated Datetime`, t.`ETLBatchID` = s.`ETLBatchID`, t.`ETLBatchTS` = s.`ETLBatchTS`, t.`ETLOriginalTS` = s.`ETLOriginalTS`, t.`Last Modified By` = s.`Last Modified By`, t.`Last Modified Datetime` = s.`Last Modified Datetime`
+# MAGIC         WHEN NOT MATCHED THEN
+# MAGIC         INSERT (`Allergy Code`, `BUSINESS_ID`, `CONTEXT_NAME`, `Allergy Concept Type`, `Allergy ID`, `CONTEXT_PARENTCONTEXTID`, `Allergy Name`, `Allergy Reaction Name`, `Type`, `Patient ID`, `Chart ID`, `Created By`, `Created Datetime`, `RxNorm Code`, `Deactivated By`, `Deactivated Datetime`, `Deleted By`, `Onset Date`, `Deleted Datetime`, `Note`, `Reactivated By`, `Reactivated Datetime`, `ETLBatchID`, `ETLBatchTS`, `ETLOriginalTS`, `Last Modified By`, `Last Modified Datetime`)
+# MAGIC         VALUES (s.`Allergy Code`, s.`BUSINESS_ID`, s.`CONTEXT_NAME`, s.`Allergy Concept Type`, s.`Allergy ID`, s.`CONTEXT_PARENTCONTEXTID`, s.`Allergy Name`, s.`Allergy Reaction Name`, s.`Type`, s.`Patient ID`, s.`Chart ID`, s.`Created By`, s.`Created Datetime`, s.`RxNorm Code`, s.`Deactivated By`, s.`Deactivated Datetime`, s.`Deleted By`, s.`Onset Date`, s.`Deleted Datetime`, s.`Note`, s.`Reactivated By`, s.`Reactivated Datetime`, s.`ETLBatchID`, s.`ETLBatchTS`, s.`ETLOriginalTS`, s.`Last Modified By`, s.`Last Modified Datetime`);
+# MAGIC         
+# MAGIC Out of 0 records in Bronze.Athena_Allergy, 0 were inserted into the Silver.Allergy using Incremental load from EMR Athena.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC None
+# MAGIC Query for silver_update:  CREATE OR REPLACE TEMP VIEW silver_update AS SELECT CAST(`Appointment Type Class` AS STRING) AS `Appointment Type Class`, CAST(`BUSINESS_ID` AS INT) AS `BUSINESS_ID`, CAST(`CONTEXT_NAME` AS STRING) AS `CONTEXT_NAME`, CAST(`Appointment Type ID` AS INT) AS `Appointment Type ID`, CAST(`Appointment Type Name` AS STRING) AS `Appointment Type Name`, CAST(`CONTEXT_PARENTCONTEXTID` AS INT) AS `CONTEXT_PARENTCONTEXTID`, CAST(`Appointment Type Short Name` AS STRING) AS `Appointment Type Short Name`, CAST(`Canonical Appointment Type ID` AS INT) AS `Canonical Appointment Type ID`, CAST(`Duration` AS INT) AS `Duration`, CAST(`Patient YN` AS STRING) AS `Patient YN`, CAST(`Created By` AS STRING) AS `Created By`, CAST(`Created Datetime` AS TIMESTAMP) AS `Created Datetime`, CAST(`Deleted By` AS STRING) AS `Deleted By`, CAST(`Deleted Datetime` AS TIMESTAMP) AS `Deleted Datetime`, CAST(1 AS INT) AS `ETLBatchID`, CAST('2025-01-01 10:00:00' AS STRING) AS `ETLBatchTS`, CAST('2025-01-01 10:00:00' AS STRING) AS `ETLOriginalTS` FROM Bronze.Athena_appointmenttype;
+# MAGIC Target table Silver.AppointmentType does not exist. Creating it...
+# MAGIC Create Table Query:  
+# MAGIC             CREATE TABLE Silver.AppointmentType (
+# MAGIC                 `Appointment Type Class` STRING, `BUSINESS_ID` INT, `CONTEXT_NAME` STRING, `Appointment Type ID` INT, `Appointment Type Name` STRING, `CONTEXT_PARENTCONTEXTID` INT, `Appointment Type Short Name` STRING, `Canonical Appointment Type ID` INT, `Duration` INT, `Patient YN` STRING, `Created By` STRING, `Created Datetime` TIMESTAMP, `Deleted By` STRING, `Deleted Datetime` TIMESTAMP, `ETLBatchID` INT, `ETLBatchTS` STRING, `ETLOriginalTS` STRING
+# MAGIC             ) 
+# MAGIC             USING DELTA
+# MAGIC             TBLPROPERTIES (
+# MAGIC                 'delta.columnMapping.mode' = 'name'
+# MAGIC             )
+# MAGIC         
+# MAGIC Target table Silver.AppointmentType created successfully.
+# MAGIC Merge Query:  
+# MAGIC         MERGE INTO Silver.AppointmentType t
+# MAGIC         USING silver_update s
+# MAGIC         ON t.`BUSINESS_ID` = s.`BUSINESS_ID` AND t.`Appointment Type ID` = s.`Appointment Type ID`
+# MAGIC         WHEN MATCHED THEN
+# MAGIC         UPDATE SET
+# MAGIC             t.`Appointment Type Class` = s.`Appointment Type Class`, t.`BUSINESS_ID` = s.`BUSINESS_ID`, t.`CONTEXT_NAME` = s.`CONTEXT_NAME`, t.`Appointment Type ID` = s.`Appointment Type ID`, t.`Appointment Type Name` = s.`Appointment Type Name`, t.`CONTEXT_PARENTCONTEXTID` = s.`CONTEXT_PARENTCONTEXTID`, t.`Appointment Type Short Name` = s.`Appointment Type Short Name`, t.`Canonical Appointment Type ID` = s.`Canonical Appointment Type ID`, t.`Duration` = s.`Duration`, t.`Patient YN` = s.`Patient YN`, t.`Created By` = s.`Created By`, t.`Created Datetime` = s.`Created Datetime`, t.`Deleted By` = s.`Deleted By`, t.`Deleted Datetime` = s.`Deleted Datetime`, t.`ETLBatchID` = s.`ETLBatchID`, t.`ETLBatchTS` = s.`ETLBatchTS`, t.`ETLOriginalTS` = s.`ETLOriginalTS`
+# MAGIC         WHEN NOT MATCHED THEN
+# MAGIC         INSERT (`Appointment Type Class`, `BUSINESS_ID`, `CONTEXT_NAME`, `Appointment Type ID`, `Appointment Type Name`, `CONTEXT_PARENTCONTEXTID`, `Appointment Type Short Name`, `Canonical Appointment Type ID`, `Duration`, `Patient YN`, `Created By`, `Created Datetime`, `Deleted By`, `Deleted Datetime`, `ETLBatchID`, `ETLBatchTS`, `ETLOriginalTS`)
+# MAGIC         VALUES (s.`Appointment Type Class`, s.`BUSINESS_ID`, s.`CONTEXT_NAME`, s.`Appointment Type ID`, s.`Appointment Type Name`, s.`CONTEXT_PARENTCONTEXTID`, s.`Appointment Type Short Name`, s.`Canonical Appointment Type ID`, s.`Duration`, s.`Patient YN`, s.`Created By`, s.`Created Datetime`, s.`Deleted By`, s.`Deleted Datetime`, s.`ETLBatchID`, s.`ETLBatchTS`, s.`ETLOriginalTS`);
+# MAGIC         
+# MAGIC Out of 0 records in Bronze.Athena_appointmenttype, 0 were inserted into the Silver.AppointmentType using Incremental load from EMR Athena.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC None
+# MAGIC Error executing notebook for table AppointmentType: Notebook not found for table: AppointmentType
 
 # COMMAND ----------
 
