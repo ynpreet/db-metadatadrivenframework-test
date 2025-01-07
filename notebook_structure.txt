@@ -1,7 +1,7 @@
-DataEngineeringProject/
+RevenuecycleProject/
 │
 ├── includes/
-│   ├── common_functions
+│   ├── common_functions.py
 │   │   └── (Notebook) common_functions
 │   │       - Purpose: 
 │   │         1. Define reusable PySpark functions for each stage of the data pipeline:
@@ -12,7 +12,7 @@ DataEngineeringProject/
 │   │            - Gold → RCO_DW
 │   │         2. Provide a single, central location for all transformation logic used by downstream notebooks.
 │   │
-│   └── configuration
+│   └── configuration.py
 │       └── (Notebook) configuration
 │           - Purpose:
 │             1. Store all project configurations including:
@@ -20,20 +20,20 @@ DataEngineeringProject/
 │                - Connection details for ODBC, Snowflake, and any other data sources required.
 │                - Future connections the client might set up (e.g., new databases, APIs, SaaS platforms).
 │             2. Create or update catalogs and schemas in your metastore.
-│             3. Load config data (currently in CSVs) and persist them to Delta tables.
+│             3. Load config data (currently in CSVs which the team is creating) and persist them as Delta tables.
 │             4. Initialize logging/audit Delta tables for job status, record counts, error tracking, etc.
 │             5. Define parameter variables used throughout all stages. 
 │                - Catalog name, schema name, paths, etc. (to avoid hardcoding in downstream notebooks).
 │
 ├── ingestion/
-│   └── (Notebook) source_to_landing_control_table
+│   └── (Notebook) source_to_landing_control_table.py
 │       - Purpose:
 │         1. Orchestrator for ingesting data from various source systems (files, DBs, APIs) into the "landing" zone.
 │         2. Calls the relevant function(s) in `common_functions`.
 │         3. Reads parameter values (e.g., paths, table names) from `configuration`.
 │
 ├── bronze/
-│   └── (Notebook) landing_to_bronze_control_table
+│   └── (Notebook) landing_to_bronze_control_table.py
 │       - Purpose:
 │         1. Orchestrator for moving raw data from the landing zone into the "bronze" layer.
 │         2. Optionally performs basic data cleanup or validation.
@@ -41,45 +41,45 @@ DataEngineeringProject/
 │         4. References parameter values (schemas, paths) from `configuration`.
 │
 ├── silver/
-│   ├── (Notebook) bronze_to_silver_control_table
+│   ├── (Notebook) bronze_to_silver_control_table.py
 │   │   - Purpose:
 │   │     1. Orchestrator for transformations from "bronze" → "silver".
-│   │     2. Calls logic from `common_functions` for standardized transformations.
+│   │     2. Calls logic from `common_functions` for  transformations.
 │   │     3. Aggregates or enriches data before persisting in the silver layer.
 │   │     4. Fetches parameter values (catalog, schema) from `configuration`.
 │   │
-│   ├── (Notebook) business_logic_for_tableA
+│   ├── (Notebook) (business_logic) AdvMD_AppointmentType
 │   │   - Purpose:
-│   │     - Houses specific transformation rules or business logic for “Table A.”
+│   │     - business logic for “AdvMD_Calc_AppointmentType”
 │   │     - Referenced by `bronze_to_silver_control_table`.
 │   │
-│   └── (Notebook) business_logic_for_tableB
+│   └── (Notebook) (business_logic) .........
 │       - Purpose:
-│         - Similar to `business_logic_for_tableA` but for “Table B” or another domain-specific logic.
-│         - Separates logic by domain for easier maintenance.
+│         - Similaraly add notebook for business logics for all respective tables
+│        
 │
 ├── gold/
-│   ├── (Notebook) silver_to_gold_control_table
+│   ├── (Notebook) silver_to_gold_control_table.py
 │   │   - Purpose:
 │   │     1. Orchestrator for moving cleansed/conformed data from silver to gold.
 │   │     2. Uses `common_functions` for consistent transformations.
 │   │     3. Finalizes data into a presentation-ready format (e.g., star schema, aggregates).
 │   │     4. Pulls parameter values from `configuration`.
 │   │
-│   ├── (Notebook) business_logic_for_tableX
+│   ├── (Notebook) (business_logic) ........................
 │   │   - Purpose:
-│   │     - Advanced transformations or additional logic for “Table X” in the gold layer.
+│   │     - add notebook for business logics for all respective tables
 │   │     - Called by `silver_to_gold_control_table`.
 │   │
-│   └── (Notebook) business_logic_for_tableY
+│   └── (Notebook) (business_logic) ........................
 │       - Purpose:
-│         - Similar concept as `business_logic_for_tableX` but for “Table Y.”
+│         - Similar concept as `business_logic_for_tableX` ”
 │         - Called by `silver_to_gold_control_table`.
 │
 └── RCO_DW/
     └── (Notebook) gold_to_RCO_DW_control_table
         - Purpose:
-          1. Orchestrator for loading data from the gold layer into the RCO_DW (Data Warehouse) schema.
-          2. Calls the “Gold → RCO_DW” function in `common_functions`.
+          1. For loading data from the gold layer into the RCO_DW (Data Warehouse) schema.
+          2. Calls the “Gold → RCO_DW” function from `common_functions`.
           3. May include transformations specific to how RCO_DW is structured.
           4. Utilizes any relevant parameters defined in `configuration` (e.g., final schema names).
