@@ -5,6 +5,27 @@ spark.conf.set(
 
 # COMMAND ----------
 
+# Storage Account and Container Details
+storage_account_name = "adlsgen2mdftest"
+container_name = "control-tables"
+folder_path = "metadata"
+
+# File Paths
+bronze_layer_control_csv_path = f"abfss://{container_name}@{storage_account_name}.dfs.core.windows.net/{folder_path}/bronze_layer_control_table.csv"
+landing_to_bronze_control_csv_path = f"abfss://{container_name}@{storage_account_name}.dfs.core.windows.net/{folder_path}/landing_to_bronze_control_table.csv"
+meta_source_to_target_csv_path = f"abfss://{container_name}@{storage_account_name}.dfs.core.windows.net/{folder_path}/meta_source_to_target_table.csv"
+silver_layer_control_csv_path = f"abfss://{container_name}@{storage_account_name}.dfs.core.windows.net/{folder_path}/silver_layer_control_table.csv"
+source_to_landing_control_csv_path = f"abfss://{container_name}@{storage_account_name}.dfs.core.windows.net/{folder_path}/source_to_landing_control_table.csv"
+source_to_landing_control_table_path = f"abfss://metadata@{storage_account_name}.dfs.core.windows.net/source_to_landing/"
+# Print Paths for Verification
+print("Bronze Layer Control Table Path:", bronze_layer_control_csv_path)
+print("Landing to Bronze Control Table Path:", landing_to_bronze_control_csv_path)
+print("Meta Source to Target Table Path:", meta_source_to_target_csv_path)
+print("Silver Layer Control Table Path:", silver_layer_control_csv_path)
+print("Source to Landing Control Table Path:", source_to_landing_control_csv_path)
+
+# COMMAND ----------
+
 bronze_storage_account_name = "adlsgen2mdftest"
 bronze_container_name = "control-tables"
 bronze_folder_path = "metadata"
