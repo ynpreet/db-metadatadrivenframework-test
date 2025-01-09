@@ -1,11 +1,20 @@
 # Databricks notebook source
+#importing all libraries
+from pyspark.sql.types import *
+from pyspark.sql.functions import *
+from delta.tables import DeltaTable
+from datetime import datetime
+
+# COMMAND ----------
+
 spark.conf.set(
     "fs.azure.account.key.adlsgen2mdftest.dfs.core.windows.net",
     "Gjtm4uzocY6ZMlWkA/nXyDFDGm1qUsoWbq6FrK8rGC6yqgUXprByiPkTxmbD6qgpEvHSbHho6JsM+AStgx0pjg==")
 
 # COMMAND ----------
 
-# Storage Account and Container Details
+# Storage Account and Container Details of the Control Tables and Schemas
+
 storage_account_name = "adlsgen2mdftest"
 container_name = "control-tables"
 folder_path = "metadata"
@@ -61,10 +70,23 @@ athena_allregy_table_path = f"abfss://{bronze_container_name}@{bronze_storage_ac
 
 # COMMAND ----------
 
-#importing all libraries
-from pyspark.sql.types import *
-from pyspark.sql.functions import *
-from delta.tables import DeltaTable
+# Details for connection with ODBC
+# Set up parameters
+server_name = "server-p.database.windows.net"
+database_name = "rco_stage"
+username = "Preet@server-p"  # Use the correct username format
+password = "ABCabc123@"  # Replace with your password
+# table_name = "ehr_Allergies"  # Replace with your schema and table name
+# JDBC URL
+url = f"jdbc:sqlserver://{server_name}:1433;database={database_name};user={username};password={password};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
+
+# COMMAND ----------
+
+# Variables for source_to_landing_control_table
+
+current_date_snake_format = datetime.now().strftime('%Y_%m_%d')
+current_date_str = datetime.now().strftime('%Y-%m-%d')
+current_date = datetime.strptime(current_date_str, "%Y-%m-%d").date()
 
 # COMMAND ----------
 
