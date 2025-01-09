@@ -9,317 +9,6 @@ v_EMR  = dbutils.widgets.get("p_EMR")
 
 # COMMAND ----------
 
-spark.sql(f"""
-DROP TABLE IF EXISTS revenue_cycle_dev.metadata.source_to_landing_control_table;
-""")
-
-spark.sql(f"""
-CREATE TABLE revenue_cycle_dev.metadata.source_to_landing_control_table
-USING DELTA
-LOCATION '{source_to_landing_control_table_path}';
-""")
-
-# COMMAND ----------
-
-source_to_landing_control_table_path
-
-# COMMAND ----------
-
-# Set up parameters
-server_name = "server-p.database.windows.net"
-database_name = "rco_stage"
-username = "Preet@server-p"  # Use the correct username format
-password = "ABCabc123@" # Replace with your password
-table_name = "dbo.ehr_Allergies"  # Replace with your schema and table name
-
-# JDBC URL
-url = f"jdbc:sqlserver://{server_name}:1433;database={database_name};user={username};password={password};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
-
-# Load data from Azure SQL Database
-remote_table = (spark.read
-  .format("jdbc")  # Use "jdbc" as the format
-  .option("url", url)  # Provide the full JDBC URL
-  .option("dbtable", table_name)  # Specify the schema and table
-  .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver")  # Specify the JDBC driver
-  .load()
-)
-
-# Show the data
-display(remote_table)
-
-# COMMAND ----------
-
-# source_to_landing_control_table_df = spark.read.csv(source_to_landing_control_csv_path,header="True")
-# # # source_to_landing_control_table_df.write.mode("overwrite").saveAsTable("revenue_cycle_dev.metadata.source_to_landing_control_table")
-
-# source_to_landing_control_table_df.write \
-#   .mode("overwrite") \
-#   .option("overwriteSchema", "true") \
-#   .option("path", 'abfss://metadata@adlsgen2mdftest.dfs.core.windows.net/source_to_landing/') \
-#   .saveAsTable("revenue_cycle_dev.metadata.source_to_landing_control_table") # External table
-
-# COMMAND ----------
-
-source_to_landing_control_table_df = spark.read.format("csv").load(source_to_landing_control_csv_path,header="True")
-
-source_to_landing_control_table_df.write \
-  .mode("overwrite") \
-  .option("overwriteSchema", "true") \
-      .option("header", "true") \
-  .option("path", 'abfss://metadata@adlsgen2mdftest.dfs.core.windows.net/source_to_landing/') \
-  .saveAsTable("revenue_cycle_dev.metadata.source_to_landing_control_table") # External table
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC select * from revenue_cycle_dev.metadata.source_to_landing_control_table
-
-# COMMAND ----------
-
-def source_to_landing_control_table(emr):
-    from datetime import datetime
-    metadata_df = spark.sql(f"""select * from revenue_cycle_dev.metadata.source_to_landing_control_table 
-    where emr = emr and source_file_name = "ehr_Allergies"  ;""")
-    return display(metadata_df)       
-    
-
-# COMMAND ----------
-
-metadata_df = spark.sql(f"""select * from revenue_cycle_dev.metadata.source_to_landing_control_table 
-where emr = emr 
--- and source_file_name = "ehr_Allergies"  
-;""")
-
-# COMMAND ----------
-
-for i in metadata_df:
-    display(i)
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-           
-source_file_name = metadata_df.select("source_file_name").first()["source_file_name"]
-attributes_name = metadata_df.select("attributes_name").first()["attributes_name"]
-incremental_key = metadata_df.select("incremental_key").first()["incremental_key"]
-destination_file_path = metadata_df.select("destination_file_path").first()["destination_file_path"]
-
-# COMMAND ----------
-
-attributes_name
-
-# COMMAND ----------
-
-incremental_key
-
-# COMMAND ----------
-
-query = spark.sql("")
-
-# COMMAND ----------
-
-from datetime import datetime
-
-# Set up parameters
-server_name = "server-p.database.windows.net"
-database_name = "rco_stage"
-username = "Preet@server-p"  # Use the correct username format
-password = "ABCabc123@"  # Replace with your password
-table_name = "ehr_Allergies"  # Replace with your schema and table name
-
-# Column names and incremental key
-attributes_name = "LicenseKey, AllergyID, AllergyName, AllergyStartDate, Lastupdated"  # List of columns
-incremental_key = "Lastupdated"  # Incremental key column
-incremental_value = datetime.now().strftime('%Y-%m-%d')  # Value to filter rows
-
-# JDBC URL
-url = f"jdbc:sqlserver://{server_name}:1433;database={database_name};user={username};password={password};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
-
-# Construct the SQL query dynamically
-query = f"SELECT {attributes_name} FROM {source_file_name} WHERE {incremental_key} = '{incremental_value}'"
-
-# Load data from Azure SQL Database using the query
-remote_table = (spark.read
-  .format("jdbc")
-  .option("url", url)  # Provide the JDBC URL
-  .option("query", query)  # Pass the dynamically constructed query
-  .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver")  # Specify the JDBC driver
-  .load()
-)
-
-# Show the data
-display(remote_table)
-
-
-# COMMAND ----------
-
-from datetime import datetime
-
-# Set up parameters
-server_name = "server-p.database.windows.net"
-database_name = "rco_stage"
-username = "Preet@server-p"  # Use the correct username format
-password = "ABCabc123@"  # Replace with your password
-table_name = "ehr_Allergies"  # Replace with your schema and table name
-
-# Column names and incremental key
-attributes_name = "LicenseKey, AllergyID, AllergyName, AllergyStartDate, Lastupdated"  # List of columns
-incremental_key = "Lastupdated"  # Incremental key column
-incremental_value = datetime.now().strftime('%Y-%m-%d')  # Value to filter rows
-
-# JDBC URL
-url = f"jdbc:sqlserver://{server_name}:1433;database={database_name};user={username};password={password};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
-
-# Construct the SQL query dynamically
-query = f"SELECT {attributes_name} FROM {source_file_name} WHERE {incremental_key} = '{incremental_value}'"
-
-# Load data from Azure SQL Database using the query
-remote_table = (spark.read
-  .format("jdbc")
-  .option("url", url)  # Provide the JDBC URL
-  .option("query", query)  # Pass the dynamically constructed query
-  .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver")  # Specify the JDBC driver
-  .load()
-)
-
-
-# Define the ADLS Gen2 path to save the results
-destination_file_path.replace('YYYY_MM_DD','2025_01_09')
-adls_path = "abfss://landing@<storage_account>.dfs.core.windows.net/path/to/output/snappy.parquet"  # 
-f'abfss://landing@adlsgen2mdftest.dfs.core.windows.net/{v_EMR}/{destination_file_path}'
-
-Replace with your ADLS Gen2 path
-
-# Save the DataFrame to ADLS Gen2 in Snappy Parquet format
-remote_table.write \
-    .mode("overwrite") \
-    .option("compression", "snappy") \
-    .parquet(adls_path)
-
-print(f"Data has been successfully written to {adls_path}")
-
-# COMMAND ----------
-
-destination_file_path
-
-# COMMAND ----------
-
-from datetime import datetime
-
-# Get the current date
-current_date = datetime.now().strftime('%Y_%m_%d')
-destination_file_path = destination_file_path.replace('YYYY_MM_DD', current_date)
-
-# COMMAND ----------
-
-
-# Construct the ADLS Gen2 path
-adls_path = f"abfss://landing@adlsgen2mdftest.dfs.core.windows.net/{destination_file_path}"
-
-# Save the DataFrame to ADLS Gen2 in Snappy Parquet format
-remote_table.write \
-    .mode("overwrite") \
-    .option("compression", "snappy") \
-    .parquet(adls_path)
-
-print(f"Data has been successfully written to {adls_path}")
-
-# COMMAND ----------
-
-dbutils.fs.ls('abfss://landing@adlsgen2mdftest.dfs.core.windows.net/EMR/AdvMD')
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-spark.conf.set("spark.sql.debug.maxToStringFields", 100)
-
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC DESC EXTENDED revenue_cycle_dev.metadata.source_to_landing_control_table
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-display(dbutils.fs.ls("abfss://metadata@adlsgen2mdftest.dfs.core.windows.net"))
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-# MAGIC %run "../includes/configuration"
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC -- DROP TABLE IF EXISTS hive_metastore.default.meta_source_to_target_table;
-# MAGIC -- DROP CATALOG AdvMD;
-# MAGIC -- DROP CATALOG Athena;
-# MAGIC
-# MAGIC -- DROP TABLE IF EXISTS AdvMD.Bronze.Allregy;
-# MAGIC -- DROP TABLE IF EXISTS Athena.Bronze.Allregy;
-# MAGIC -- DROP TABLE IF EXISTS Revenue_cycle_DEV.Silver.allregy;
-# MAGIC -- DROP TABLE IF EXISTS Athena.silver.Allregy;
-# MAGIC
-# MAGIC -- DROP TABLE IF EXISTS AdvMD.Bronze.AppointmentType;
-# MAGIC -- DROP TABLE IF EXISTS Athena.Bronze.AppointmentType;
-# MAGIC -- DROP TABLE IF EXISTS AdvMD.Silver.AppointmentType;
-# MAGIC -- DROP TABLE IF EXISTS revenue_cycle_dev.silver.allergy;
-# MAGIC -- DROP TABLE IF EXISTS silver.allergy
-# MAGIC -- DROP TABLE IF EXISTS revenue_cycle_dev.bronze.advmd_calc_appointmenttype;
-# MAGIC -- DROP TABLE IF EXISTS revenue_cycle_dev.bronze.advmd_allergy;
-# MAGIC -- DROP TABLE IF EXISTS revenue_cycle_dev.bronze.advmd_allergy;
-# MAGIC
-# MAGIC -- DROP TABLE IF EXISTS Athena.silver.AppointmentType;
-# MAGIC
-
-# COMMAND ----------
-
-dbutils.widgets.text("p_EMR", "")
-v_EMR  = dbutils.widgets.get("p_EMR")
-
-# COMMAND ----------
-
 dbutils.widgets.text("p_ETLBatchID", "")
 v_ETLBatchID  = dbutils.widgets.get("p_ETLBatchID")
 
@@ -340,18 +29,153 @@ v_practice  = dbutils.widgets.get("p_practice")
 
 # COMMAND ----------
 
+spark.sql(f"""
+DROP TABLE IF EXISTS revenue_cycle_dev.metadata.source_to_landing_control_table;
+""")
 
-meta_source_to_target_table_df = spark.read.csv(meta_source_to_target_table_path,header=True, inferSchema=True)
-meta_source_to_target_table_df.write.format("delta").option("delta.columnMapping.mode", "name").mode("overwrite").saveAsTable("hive_metastore.default.meta_source_to_target_table")
+spark.sql(f"""
+CREATE TABLE revenue_cycle_dev.metadata.source_to_landing_control_table
+USING DELTA
+LOCATION '{source_to_landing_control_table_path}';
+""")
+
+# COMMAND ----------
+
+source_to_landing_control_table_df = spark.read.format("csv").load(source_to_landing_control_csv_path,header="True")
+
+source_to_landing_control_table_df.write \
+  .mode("overwrite") \
+  .option("overwriteSchema", "true") \
+      .option("header", "true") \
+  .option("path", 'abfss://metadata@adlsgen2mdftest.dfs.core.windows.net/source_to_landing/') \
+  .saveAsTable("revenue_cycle_dev.metadata.source_to_landing_control_table") # External table
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC select * from hive_metastore.default.meta_source_to_target_table
+# MAGIC UPDATE revenue_cycle_dev.metadata.source_to_landing_control_table SET last_modified_date = DATE('2025-01-06'); -- only for debugging purpose
 
 # COMMAND ----------
 
-meta_source_to_target_table_df.printSchema()
+# MAGIC %sql
+# MAGIC select * from revenue_cycle_dev.metadata.source_to_landing_control_table -- only for debugging purpose
+
+# COMMAND ----------
+
+def source_to_landing_control_table(emr):
+    from datetime import datetime
+    metadata_df = spark.sql(f"""select * from revenue_cycle_dev.metadata.source_to_landing_control_table 
+    where emr = emr and source_file_name = "ehr_Allergies"  ;""")
+    return display(metadata_df)       
+    
+
+# COMMAND ----------
+
+metadata_df = spark.sql(f"""select * from revenue_cycle_dev.metadata.source_to_landing_control_table 
+where emr = '{v_EMR}'
+-- and source_file_name = "ehr_Allergies"  
+and last_modified_date > DATE('2025-01-01') -- in final code it will be less than current date
+;""")
+
+# COMMAND ----------
+
+display(metadata_df)
+
+# COMMAND ----------
+
+from datetime import datetime
+
+# Set up parameters
+server_name = "server-p.database.windows.net"
+database_name = "rco_stage"
+username = "Preet@server-p"  # Use the correct username format
+password = "ABCabc123@"  # Replace with your password
+# table_name = "ehr_Allergies"  # Replace with your schema and table name
+# JDBC URL
+url = f"jdbc:sqlserver://{server_name}:1433;database={database_name};user={username};password={password};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
+# Get the current date
+
+storage_container = "adlsgen2mdftest"
+directory = "landing"
+current_date = datetime.now().strftime('%Y_%m_%d')
+
+
+# Define the ADLS Gen2 path to save the results
+
+
+
+
+# Replace with your ADLS Gen2 path
+
+
+
+# COMMAND ----------
+
+
+source_file_name_col = metadata_df.select("source_file_name").collect()
+attributes_name_col = metadata_df.select("attributes_name").collect()
+incremental_key_col = metadata_df.select("incremental_key").collect()
+destination_file_path_col = metadata_df.select("destination_file_path").collect()
+# last_modified_date_col = metadata_df.select("last_modified_date").collect()
+for i in range(metadata_df.count()):
+    source_file_name=source_file_name_col[i][0]
+    attributes_name=attributes_name_col[i][0]
+    incremental_key=incremental_key_col[i][0]
+    destination_file_path=destination_file_path_col[i][0]
+    destination_file_path = destination_file_path.replace('YYYY_MM_DD', current_date)
+    # last_modified_date = last_modified_date_col[i][0]
+    incremental_value = last_modified_date  # Value to filter rows
+    # Construct the SQL query dynamically
+    query_all_cols = f"SELECT {attributes_name} FROM {source_file_name} "
+    query_max_last_updated_date = f"SELECT max({incremental_key}) as max_last_updated_date FROM {source_file_name} "
+    adls_path = f'abfss://{directory}@{storage_container}.dfs.core.windows.net/{destination_file_path}'
+    
+    remote_table = (spark.read
+                    .format("jdbc")
+                    .option("url", url)  # Provide the JDBC URL
+                    .option("query", query_all_cols)  # Pass the dynamically constructed query
+                    .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver")  # Specify the JDBC driver
+                    .load()
+                    )
+    
+    max_last_updated_date = (spark.read
+                .format("jdbc")
+                .option("url", url)  # Provide the JDBC URL
+                .option("query", query_max_last_updated_date)  # Pass the dynamically constructed query
+                .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver")  # Specify the JDBC driver
+                .load()
+                )
+    
+    max_last_updated_date = max_last_updated_date.collect()[0][0]
+    max_last_updated_date_str = max_last_updated_date.strftime('%Y-%m-%d')
+
+
+    # Save the DataFrame to ADLS Gen2 in Snappy Parquet format
+    remote_table.write \
+    .mode("overwrite") \
+    .option("compression", "snappy") \
+    .parquet(adls_path)
+
+    spark.sql(f"UPDATE revenue_cycle_dev.metadata.source_to_landing_control_table SET last_modified_date = '{max_last_updated_date_str}' where source_file_name = '{source_file_name}' and emr = '{v_EMR}' ") 
+
+    print(f"Records from {source_file_name} up to {max_last_updated_date_str} has been successfully written to {adls_path}")
+    
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+
 
 # COMMAND ----------
 
@@ -418,26 +242,6 @@ def create_bronze_table(table_name, schema_name):
 
     print(f"Table creation process completed for {table_full_name}.")
 
-
-# COMMAND ----------
-
-create_bronze_table('Allergy','Bronze')
-
-# COMMAND ----------
-
-create_bronze_table('AppointmentType','Bronze')
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC USE CATALOG revenue_cycle_dev;
-# MAGIC SHOW TABLES FROM bronze;
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC USE CATALOG revenue_cycle_dev;
-# MAGIC SHOW TABLES FROM bronze;
 
 # COMMAND ----------
 
@@ -670,89 +474,4 @@ def meta_source_to_target_table(table_name):
         SET EndTime = '{end_time}'
         WHERE TableName = '{table_name}' AND StartTime = '{start_time}'
     """)
-
-
-# COMMAND ----------
-
-# meta_source_to_target_table('Allergy')
-meta_source_to_target_table('AppointmentType')
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC sample output:
-# MAGIC None
-# MAGIC Query for silver_update:  CREATE OR REPLACE TEMP VIEW silver_update AS SELECT CAST(`Allergy Code` AS INT) AS `Allergy Code`, CAST(`LicenseKey` AS INT) AS `BUSINESS_ID`, CAST(`Allergy ID` AS INT) AS `Allergy ID`, CAST(`Allergy Concept Type` AS INT) AS `Allergy Concept Type`, CAST(`Type` AS STRING) AS `Type`, CAST(`Patient ID` AS INT) AS `Patient ID`, CAST(`Allergy Name` AS STRING) AS `Allergy Name`, CAST(`Allergy Onset Date` AS DATE) AS `Onset Date`, CAST(`Allergy Reaction Name` AS STRING) AS `Allergy Reaction Name`, CAST(`Created By` AS STRING) AS `Created By`, CAST(`RxNorm Code` AS STRING) AS `RxNorm Code`, CAST(`Created Datetime` AS TIMESTAMP) AS `Created Datetime`, CAST(`Deactivated By` AS STRING) AS `Deactivated By`, CAST(`Deactivated Datetime` AS TIMESTAMP) AS `Deactivated Datetime`, CAST(`Deleted By` AS STRING) AS `Deleted By`, CAST(`Deleted Datetime` AS TIMESTAMP) AS `Deleted Datetime`, CAST(`Last Modified By` AS STRING) AS `Last Modified By`, CAST(`Reactivated Datetime` AS TIMESTAMP) AS `Reactivated Datetime`, CAST(`Reactivated By` AS STRING) AS `Reactivated By`, CAST(`Last Modified Datetime` AS TIMESTAMP) AS `Last Modified Datetime`, CAST(`Note` AS STRING) AS `Note`, CAST(1 AS INT) AS `ETLBatchID`, CAST('2025-01-01 10:00:00' AS TIMESTAMP) AS `ETLBatchTS`, CAST('2025-01-01 10:00:00' AS TIMESTAMP) AS `ETLOriginalTS`, CAST('' AS INT) AS `Chart ID`, CAST('' AS STRING) AS `CONTEXT_NAME`, CAST('' AS INT) AS `CONTEXT_PARENTCONTEXTID` FROM Bronze.AdvMD_Allergy;
-# MAGIC Merge Query:  
-# MAGIC         MERGE INTO Silver.Allergy t
-# MAGIC         USING silver_update s
-# MAGIC         ON t.`BUSINESS_ID` = s.`BUSINESS_ID` AND t.`Allergy ID` = s.`Allergy ID`
-# MAGIC         WHEN MATCHED THEN
-# MAGIC         UPDATE SET
-# MAGIC             t.`Allergy Code` = s.`Allergy Code`, t.`BUSINESS_ID` = s.`BUSINESS_ID`, t.`Allergy ID` = s.`Allergy ID`, t.`Allergy Concept Type` = s.`Allergy Concept Type`, t.`Type` = s.`Type`, t.`Patient ID` = s.`Patient ID`, t.`Allergy Name` = s.`Allergy Name`, t.`Onset Date` = s.`Onset Date`, t.`Allergy Reaction Name` = s.`Allergy Reaction Name`, t.`Created By` = s.`Created By`, t.`RxNorm Code` = s.`RxNorm Code`, t.`Created Datetime` = s.`Created Datetime`, t.`Deactivated By` = s.`Deactivated By`, t.`Deactivated Datetime` = s.`Deactivated Datetime`, t.`Deleted By` = s.`Deleted By`, t.`Deleted Datetime` = s.`Deleted Datetime`, t.`Last Modified By` = s.`Last Modified By`, t.`Reactivated Datetime` = s.`Reactivated Datetime`, t.`Reactivated By` = s.`Reactivated By`, t.`Last Modified Datetime` = s.`Last Modified Datetime`, t.`Note` = s.`Note`, t.`ETLBatchID` = s.`ETLBatchID`, t.`ETLBatchTS` = s.`ETLBatchTS`, t.`ETLOriginalTS` = s.`ETLOriginalTS`, t.`Chart ID` = s.`Chart ID`, t.`CONTEXT_NAME` = s.`CONTEXT_NAME`, t.`CONTEXT_PARENTCONTEXTID` = s.`CONTEXT_PARENTCONTEXTID`
-# MAGIC         WHEN NOT MATCHED THEN
-# MAGIC         INSERT (`Allergy Code`, `BUSINESS_ID`, `Allergy ID`, `Allergy Concept Type`, `Type`, `Patient ID`, `Allergy Name`, `Onset Date`, `Allergy Reaction Name`, `Created By`, `RxNorm Code`, `Created Datetime`, `Deactivated By`, `Deactivated Datetime`, `Deleted By`, `Deleted Datetime`, `Last Modified By`, `Reactivated Datetime`, `Reactivated By`, `Last Modified Datetime`, `Note`, `ETLBatchID`, `ETLBatchTS`, `ETLOriginalTS`, `Chart ID`, `CONTEXT_NAME`, `CONTEXT_PARENTCONTEXTID`)
-# MAGIC         VALUES (s.`Allergy Code`, s.`BUSINESS_ID`, s.`Allergy ID`, s.`Allergy Concept Type`, s.`Type`, s.`Patient ID`, s.`Allergy Name`, s.`Onset Date`, s.`Allergy Reaction Name`, s.`Created By`, s.`RxNorm Code`, s.`Created Datetime`, s.`Deactivated By`, s.`Deactivated Datetime`, s.`Deleted By`, s.`Deleted Datetime`, s.`Last Modified By`, s.`Reactivated Datetime`, s.`Reactivated By`, s.`Last Modified Datetime`, s.`Note`, s.`ETLBatchID`, s.`ETLBatchTS`, s.`ETLOriginalTS`, s.`Chart ID`, s.`CONTEXT_NAME`, s.`CONTEXT_PARENTCONTEXTID`);
-# MAGIC         
-# MAGIC Out of 0 records in Bronze.AdvMD_Allergy, 0 were inserted into the Silver.Allergy using Incremental load from EMR AdvMD.
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC None
-# MAGIC Query for silver_update:  CREATE OR REPLACE TEMP VIEW silver_update AS SELECT CAST(`Allergy Code` AS INT) AS `Allergy Code`, CAST(`CONTEXT_ID` AS INT) AS `BUSINESS_ID`, CAST(`CONTEXT_NAME` AS STRING) AS `CONTEXT_NAME`, CAST(`Allergy Concept Type` AS INT) AS `Allergy Concept Type`, CAST(`Allergy ID` AS INT) AS `Allergy ID`, CAST(`CONTEXT_PARENTCONTEXTID` AS INT) AS `CONTEXT_PARENTCONTEXTID`, CAST(`Allergy Name` AS STRING) AS `Allergy Name`, CAST(`Allergy Reaction Name` AS STRING) AS `Allergy Reaction Name`, CAST(`Type` AS STRING) AS `Type`, CAST(`Patient ID` AS INT) AS `Patient ID`, CAST(`Chart ID` AS INT) AS `Chart ID`, CAST(`Created By` AS STRING) AS `Created By`, CAST(`Created Datetime` AS TIMESTAMP) AS `Created Datetime`, CAST(`RxNorm Code` AS STRING) AS `RxNorm Code`, CAST(`Deactivated By` AS STRING) AS `Deactivated By`, CAST(`Deactivated Datetime` AS TIMESTAMP) AS `Deactivated Datetime`, CAST(`Deleted By` AS STRING) AS `Deleted By`, CAST(`Onset Date` AS DATE) AS `Onset Date`, CAST(`Deleted Datetime` AS TIMESTAMP) AS `Deleted Datetime`, CAST(`Note` AS STRING) AS `Note`, CAST(`Reactivated By` AS STRING) AS `Reactivated By`, CAST(`Reactivated Datetime` AS TIMESTAMP) AS `Reactivated Datetime`, CAST(1 AS INT) AS `ETLBatchID`, CAST('2025-01-01 10:00:00' AS TIMESTAMP) AS `ETLBatchTS`, CAST('2025-01-01 10:00:00' AS TIMESTAMP) AS `ETLOriginalTS`, CAST('' AS STRING) AS `Last Modified By`, CAST('' AS TIMESTAMP) AS `Last Modified Datetime` FROM Bronze.Athena_Allergy;
-# MAGIC Merge Query:  
-# MAGIC         MERGE INTO Silver.Allergy t
-# MAGIC         USING silver_update s
-# MAGIC         ON t.`BUSINESS_ID` = s.`BUSINESS_ID` AND t.`Allergy ID` = s.`Allergy ID` AND t.`Type` = s.`Type`
-# MAGIC         WHEN MATCHED THEN
-# MAGIC         UPDATE SET
-# MAGIC             t.`Allergy Code` = s.`Allergy Code`, t.`BUSINESS_ID` = s.`BUSINESS_ID`, t.`CONTEXT_NAME` = s.`CONTEXT_NAME`, t.`Allergy Concept Type` = s.`Allergy Concept Type`, t.`Allergy ID` = s.`Allergy ID`, t.`CONTEXT_PARENTCONTEXTID` = s.`CONTEXT_PARENTCONTEXTID`, t.`Allergy Name` = s.`Allergy Name`, t.`Allergy Reaction Name` = s.`Allergy Reaction Name`, t.`Type` = s.`Type`, t.`Patient ID` = s.`Patient ID`, t.`Chart ID` = s.`Chart ID`, t.`Created By` = s.`Created By`, t.`Created Datetime` = s.`Created Datetime`, t.`RxNorm Code` = s.`RxNorm Code`, t.`Deactivated By` = s.`Deactivated By`, t.`Deactivated Datetime` = s.`Deactivated Datetime`, t.`Deleted By` = s.`Deleted By`, t.`Onset Date` = s.`Onset Date`, t.`Deleted Datetime` = s.`Deleted Datetime`, t.`Note` = s.`Note`, t.`Reactivated By` = s.`Reactivated By`, t.`Reactivated Datetime` = s.`Reactivated Datetime`, t.`ETLBatchID` = s.`ETLBatchID`, t.`ETLBatchTS` = s.`ETLBatchTS`, t.`ETLOriginalTS` = s.`ETLOriginalTS`, t.`Last Modified By` = s.`Last Modified By`, t.`Last Modified Datetime` = s.`Last Modified Datetime`
-# MAGIC         WHEN NOT MATCHED THEN
-# MAGIC         INSERT (`Allergy Code`, `BUSINESS_ID`, `CONTEXT_NAME`, `Allergy Concept Type`, `Allergy ID`, `CONTEXT_PARENTCONTEXTID`, `Allergy Name`, `Allergy Reaction Name`, `Type`, `Patient ID`, `Chart ID`, `Created By`, `Created Datetime`, `RxNorm Code`, `Deactivated By`, `Deactivated Datetime`, `Deleted By`, `Onset Date`, `Deleted Datetime`, `Note`, `Reactivated By`, `Reactivated Datetime`, `ETLBatchID`, `ETLBatchTS`, `ETLOriginalTS`, `Last Modified By`, `Last Modified Datetime`)
-# MAGIC         VALUES (s.`Allergy Code`, s.`BUSINESS_ID`, s.`CONTEXT_NAME`, s.`Allergy Concept Type`, s.`Allergy ID`, s.`CONTEXT_PARENTCONTEXTID`, s.`Allergy Name`, s.`Allergy Reaction Name`, s.`Type`, s.`Patient ID`, s.`Chart ID`, s.`Created By`, s.`Created Datetime`, s.`RxNorm Code`, s.`Deactivated By`, s.`Deactivated Datetime`, s.`Deleted By`, s.`Onset Date`, s.`Deleted Datetime`, s.`Note`, s.`Reactivated By`, s.`Reactivated Datetime`, s.`ETLBatchID`, s.`ETLBatchTS`, s.`ETLOriginalTS`, s.`Last Modified By`, s.`Last Modified Datetime`);
-# MAGIC         
-# MAGIC Out of 0 records in Bronze.Athena_Allergy, 0 were inserted into the Silver.Allergy using Incremental load from EMR Athena.
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC None
-# MAGIC Query for silver_update:  CREATE OR REPLACE TEMP VIEW silver_update AS SELECT CAST(`Appointment Type Class` AS STRING) AS `Appointment Type Class`, CAST(`BUSINESS_ID` AS INT) AS `BUSINESS_ID`, CAST(`CONTEXT_NAME` AS STRING) AS `CONTEXT_NAME`, CAST(`Appointment Type ID` AS INT) AS `Appointment Type ID`, CAST(`Appointment Type Name` AS STRING) AS `Appointment Type Name`, CAST(`CONTEXT_PARENTCONTEXTID` AS INT) AS `CONTEXT_PARENTCONTEXTID`, CAST(`Appointment Type Short Name` AS STRING) AS `Appointment Type Short Name`, CAST(`Canonical Appointment Type ID` AS INT) AS `Canonical Appointment Type ID`, CAST(`Duration` AS INT) AS `Duration`, CAST(`Patient YN` AS STRING) AS `Patient YN`, CAST(`Created By` AS STRING) AS `Created By`, CAST(`Created Datetime` AS TIMESTAMP) AS `Created Datetime`, CAST(`Deleted By` AS STRING) AS `Deleted By`, CAST(`Deleted Datetime` AS TIMESTAMP) AS `Deleted Datetime`, CAST(1 AS INT) AS `ETLBatchID`, CAST('2025-01-01 10:00:00' AS STRING) AS `ETLBatchTS`, CAST('2025-01-01 10:00:00' AS STRING) AS `ETLOriginalTS` FROM Bronze.Athena_appointmenttype;
-# MAGIC Target table Silver.AppointmentType does not exist. Creating it...
-# MAGIC Create Table Query:  
-# MAGIC             CREATE TABLE Silver.AppointmentType (
-# MAGIC                 `Appointment Type Class` STRING, `BUSINESS_ID` INT, `CONTEXT_NAME` STRING, `Appointment Type ID` INT, `Appointment Type Name` STRING, `CONTEXT_PARENTCONTEXTID` INT, `Appointment Type Short Name` STRING, `Canonical Appointment Type ID` INT, `Duration` INT, `Patient YN` STRING, `Created By` STRING, `Created Datetime` TIMESTAMP, `Deleted By` STRING, `Deleted Datetime` TIMESTAMP, `ETLBatchID` INT, `ETLBatchTS` STRING, `ETLOriginalTS` STRING
-# MAGIC             ) 
-# MAGIC             USING DELTA
-# MAGIC             TBLPROPERTIES (
-# MAGIC                 'delta.columnMapping.mode' = 'name'
-# MAGIC             )
-# MAGIC         
-# MAGIC Target table Silver.AppointmentType created successfully.
-# MAGIC Merge Query:  
-# MAGIC         MERGE INTO Silver.AppointmentType t
-# MAGIC         USING silver_update s
-# MAGIC         ON t.`BUSINESS_ID` = s.`BUSINESS_ID` AND t.`Appointment Type ID` = s.`Appointment Type ID`
-# MAGIC         WHEN MATCHED THEN
-# MAGIC         UPDATE SET
-# MAGIC             t.`Appointment Type Class` = s.`Appointment Type Class`, t.`BUSINESS_ID` = s.`BUSINESS_ID`, t.`CONTEXT_NAME` = s.`CONTEXT_NAME`, t.`Appointment Type ID` = s.`Appointment Type ID`, t.`Appointment Type Name` = s.`Appointment Type Name`, t.`CONTEXT_PARENTCONTEXTID` = s.`CONTEXT_PARENTCONTEXTID`, t.`Appointment Type Short Name` = s.`Appointment Type Short Name`, t.`Canonical Appointment Type ID` = s.`Canonical Appointment Type ID`, t.`Duration` = s.`Duration`, t.`Patient YN` = s.`Patient YN`, t.`Created By` = s.`Created By`, t.`Created Datetime` = s.`Created Datetime`, t.`Deleted By` = s.`Deleted By`, t.`Deleted Datetime` = s.`Deleted Datetime`, t.`ETLBatchID` = s.`ETLBatchID`, t.`ETLBatchTS` = s.`ETLBatchTS`, t.`ETLOriginalTS` = s.`ETLOriginalTS`
-# MAGIC         WHEN NOT MATCHED THEN
-# MAGIC         INSERT (`Appointment Type Class`, `BUSINESS_ID`, `CONTEXT_NAME`, `Appointment Type ID`, `Appointment Type Name`, `CONTEXT_PARENTCONTEXTID`, `Appointment Type Short Name`, `Canonical Appointment Type ID`, `Duration`, `Patient YN`, `Created By`, `Created Datetime`, `Deleted By`, `Deleted Datetime`, `ETLBatchID`, `ETLBatchTS`, `ETLOriginalTS`)
-# MAGIC         VALUES (s.`Appointment Type Class`, s.`BUSINESS_ID`, s.`CONTEXT_NAME`, s.`Appointment Type ID`, s.`Appointment Type Name`, s.`CONTEXT_PARENTCONTEXTID`, s.`Appointment Type Short Name`, s.`Canonical Appointment Type ID`, s.`Duration`, s.`Patient YN`, s.`Created By`, s.`Created Datetime`, s.`Deleted By`, s.`Deleted Datetime`, s.`ETLBatchID`, s.`ETLBatchTS`, s.`ETLOriginalTS`);
-# MAGIC         
-# MAGIC Out of 0 records in Bronze.Athena_appointmenttype, 0 were inserted into the Silver.AppointmentType using Incremental load from EMR Athena.
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC None
-# MAGIC Error executing notebook for table AppointmentType: Notebook not found for table: AppointmentType
-
-# COMMAND ----------
-
-meta_source_to_target_table('AppointmentType')
-
-# COMMAND ----------
-
 
