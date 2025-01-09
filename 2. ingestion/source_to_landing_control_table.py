@@ -1,11 +1,111 @@
 # Databricks notebook source
 # MAGIC %run "../1. includes/configuration"
-# MAGIC
+
+# COMMAND ----------
+
+from pyspark.sql.functions import to_date, lit
+
+from datetime import datetime
+
+
+# COMMAND ----------
+
+def check_data_existence_in_odbc(tab_name):
+    server_name = "server-p.database.windows.net"
+    database_name = "rco_stage"
+    username = "Preet@server-p"  # Use the correct username format
+    password = "ABCabc123@"  # Replace with your password
+    connection_properties = {
+    "user": "Preet@server-p",
+    "password": "ABCabc123@",
+    "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+    }
+
+    # table_name = "ehr_Allergies"  # Replace with your schema and table name
+    # JDBC URL
+    url = f"jdbc:sqlserver://{server_name}:1433;database={database_name};user={username};password={password};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
+    query = f""" SELECT TABLE_NAME 
+                FROM INFORMATION_SCHEMA.TABLES 
+                WHERE TABLE_NAME = '{tab_name}'
+                """
+    df = spark.read.jdbc(url, f"({query}) as table_check", properties=connection_properties)
+    # Check if the DataFrame is empty
+    if df.count() > 0:
+        return True
+    else:
+        return False
+
+
+# COMMAND ----------
+
+# def remove_files_from_adls(adls_path):
+#     try:
+#         dbutils.fs.rm(f"{adls_path}", True)
+#         print(f"Cleaned up non-Delta files")
+#     except Exception as cleanup_error:
+#         print(f"Failed to clean up non-Delta: {str(cleanup_error)}")
+
+# COMMAND ----------
+
+def remove_files_from_adls(adls_path):
+    """
+    Removes files from the specified ADLS path.
+
+    Parameters:
+    adls_path (str): The ADLS path from which files need to be removed.
+    """
+    try:
+        # Validate the path
+        if not adls_path.startswith("abfss://"):
+            raise ValueError(f"Invalid ADLS path: {adls_path}")
+
+        # Remove the files
+        dbutils.fs.rm(adls_path, True)
+        print(f"Successfully cleaned up non-Delta files at: {adls_path}")
+    except Exception as cleanup_error:
+        print(f"Failed to clean up non-Delta files at {adls_path}: {str(cleanup_error)}")
+
+# COMMAND ----------
+
+from datetime import datetime
+
+# Set up parameters
+server_name = "server-p.database.windows.net"
+database_name = "rco_stage"
+username = "Preet@server-p"  # Use the correct username format
+password = "ABCabc123@"  # Replace with your password
+# table_name = "ehr_Allergies"  # Replace with your schema and table name
+# JDBC URL
+url = f"jdbc:sqlserver://{server_name}:1433;database={database_name};user={username};password={password};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
+# Get the current date
+
+storage_container = "adlsgen2mdftest"
+directory = "landing"
+current_date_snake_format = datetime.now().strftime('%Y_%m_%d')
+current_date_str = datetime.now().strftime('%Y-%m-%d')
+current_date = datetime.strptime(current_date_str, "%Y-%m-%d").date()
+print(type(current_date))  # Output: <class 'datetime.date'>
+print(current_date)        # Output: 2025-01-09
+
+
+# Define the ADLS Gen2 path to save the results
+
+
+
+
+# Replace with your ADLS Gen2 path
+
+
 
 # COMMAND ----------
 
 dbutils.widgets.text("p_EMR", "")
 v_EMR  = dbutils.widgets.get("p_EMR")
+
+# COMMAND ----------
+
+dbutils.widgets.text("p_Practice_ETL_ID", "")
+v_Practice_ETL_ID  = dbutils.widgets.get("p_Practice_ETL_ID")
 
 # COMMAND ----------
 
@@ -62,104 +162,218 @@ source_to_landing_control_table_df.write \
 
 # COMMAND ----------
 
-def source_to_landing_control_table(emr):
+# yet to add number of records inserted -- Pending
+# yet to add logic for if functions runs twice on same day. Ideally it should not execute for the same table again
+
+def source_to_landing_control_table(user_emr):
+
     from datetime import datetime
     metadata_df = spark.sql(f"""select * from revenue_cycle_dev.metadata.source_to_landing_control_table 
-    where emr = emr and source_file_name = "ehr_Allergies"  ;""")
-    return display(metadata_df)       
-    
+    where emr = '{user_emr}'
+    -- and source_file_name = "ehr_Allergies"  -- for debugging
+    and last_modified_date < Date('{current_date}') -- This helps if function is executed twice
+    and is_active = 1
+    and frequency = 'Daily' -- Logic for Monthly, Weekly???
+    -- and load_type == 'full' -- for debugging
+    ;""")
+
+
+    # Logging stuff
+    v_ETLBatchID = 1 #Do not hard code anything
+    v_ETLBatchTS = "2025-01-01 10:00:00" #Do not hard code anything
+    v_ETLOriginalTS = "2025-01-01 10:00:00" #Do not hard code anything
+    v_practice = "SKI" #Do not hard code anything
+    layer_name = 'landing_to_bronze' #Do not hard code anything
+
+    # Create logging schema and table if not exists -- followed in Merge to ODS
+    spark.sql("CREATE SCHEMA IF NOT EXISTS logging;")
+    spark.sql("""
+            CREATE TABLE IF NOT EXISTS logging.log_merge (
+                LogID BIGINT GENERATED BY DEFAULT AS IDENTITY, 
+                layer_name STRING, -- added new column on 1/9/25
+                TableName STRING,
+                Practice STRING,
+                ETLBatchID INT,
+                ETLBatchTS TIMESTAMP,
+                StartTime TIMESTAMP,
+                EndTime TIMESTAMP
+            ) USING DELTA;
+    """)
+
+    # Log the start time in MST timezone
+
+
+    source_file_name_col = metadata_df.select("source_file_name").collect()
+    attributes_name_col = metadata_df.select("attributes_name").collect()
+    incremental_key_col = metadata_df.select("incremental_key").collect()
+    destination_file_path_col = metadata_df.select("destination_file_path").collect()
+    load_type_col = metadata_df.select("load_type").collect()
+    destination_file_format_col = metadata_df.select("destination_file_format").collect()
+    last_modified_date_col = metadata_df.select("last_modified_date").collect()
+    business_logic = metadata_df.select("business_logic").collect()
+
+
+
+    for i in range(metadata_df.count()):
+        source_file_name=source_file_name_col[i][0]
+
+        from datetime import datetime
+        import pytz
+        mst = pytz.timezone('MST')
+        start_time = datetime.now(mst)
+
+    # Insert initial log entry
+        spark.sql(f"""
+            INSERT INTO logging.log_merge (layer_name, TableName, Practice, ETLBatchID, ETLBatchTS, StartTime)
+            VALUES ('{layer_name}','{source_file_name}', '{v_Practice_ETL_ID}', {v_ETLBatchID}, '{v_ETLBatchTS}', '{start_time}')
+        """)
+
+        if check_data_existence_in_odbc(str(source_file_name)) == False:
+            print(f"Table {source_file_name} does not exist")
+
+            end_time = datetime.now(mst)
+            spark.sql(f"""
+                UPDATE logging.log_merge
+                SET EndTime = '{end_time}'
+                WHERE TableName = '{source_file_name}' AND StartTime = '{start_time}'
+            """)
+            # Pending: add code to update this in log table
+            continue
+        
+        if business_logic == 1:
+            continue # Skipping as of now for business logic = 1
+
+
+        attributes_name=attributes_name_col[i][0]
+        incremental_key=incremental_key_col[i][0]
+        destination_file_path=destination_file_path_col[i][0]
+        load_type=load_type_col[i][0]
+        destination_file_path = destination_file_path.replace('_YYYY_MM_DD', '/'+current_date_snake_format)
+        destination_file_path = destination_file_path.replace('Practice_ETL_ID', v_Practice_ETL_ID)
+        last_modified_date = last_modified_date_col[i][0]
+        destination_file_format = destination_file_format_col[i][0]    
+        # incremental_value = last_modified_date  # Value to filter rows
+        # Construct the SQL query dynamically
+
+        #loading the data
+        if destination_file_format == 'snappy.parquet':
+            file_format = "parquet"
+            compression = "snappy"
+        elif destination_file_format == 'csv':
+            file_format = "csv"
+            compression = "gzip"
+
+
+        query_max_last_updated_date = f"SELECT max({incremental_key}) as max_last_updated_date FROM {source_file_name} "
+        adls_path = f'abfss://{directory}@{storage_container}.dfs.core.windows.net/{destination_file_path}'
+        print("adls_path:",adls_path)
+        
+        if load_type == 'incremental':
+            query = f"SELECT {attributes_name} FROM {source_file_name} where {incremental_key} > '{last_modified_date}'"
+
+            table_for_incremental_load = (spark.read
+                        .format("jdbc")
+                        .option("url", url)  # Provide the JDBC URL
+                        .option("query", query)  # Pass the dynamically constructed query
+                        .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver")  # Specify the JDBC driver
+                        .load()
+                        )
+            max_last_updated_date = (spark.read
+                        .format("jdbc")
+                        .option("url", url)  # Provide the JDBC URL
+                        .option("query", query_max_last_updated_date)  # Pass the dynamically constructed query
+                        .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver")  # Specify the JDBC driver
+                        .load()
+                        )
+            
+            max_last_updated_date = max_last_updated_date.collect()[0][0]
+            max_last_updated_date_str = max_last_updated_date.strftime('%Y-%m-%d')
+            
+            
+            #loading the data
+            table_for_incremental_load.write.mode("overwrite").format(file_format).option("compression", compression).save(adls_path)
+                    
+            
+
+        elif load_type == 'full':
+            remove_files_from_adls(adls_path)
+            #     dbutils.fs.rm(f"{adls_path}", True)
+            #     print(f"Cleaned up non-Delta files for table: {source_file_name}")
+            # except Exception as cleanup_error:
+            #     print(f"Failed to clean up non-Delta files for {source_file_name}: {str(cleanup_error)}")
+            query = f"SELECT {attributes_name} FROM {source_file_name}"
+
+            table_for_full_load = (spark.read
+                        .format("jdbc")
+                        .option("url", url)  # Provide the JDBC URL
+                        .option("query", query)  # Pass the dynamically constructed query
+                        .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver")  # Specify the JDBC driver
+                        .load()
+                        )
+            
+            table_for_full_load.write.mode("overwrite").format(file_format).option("compression", compression).save(adls_path)
+
+        spark.sql(f"UPDATE revenue_cycle_dev.metadata.source_to_landing_control_table SET last_modified_date = '{max_last_updated_date_str}' where source_file_name = '{source_file_name}' and emr = '{v_EMR}' ") 
+            # Log the end time
+        end_time = datetime.now(mst)
+        
+        #logging
+        spark.sql(f"""
+            UPDATE logging.log_merge
+            SET EndTime = '{end_time}'
+            WHERE TableName = '{source_file_name}' AND StartTime = '{start_time}'
+        """)
+
+        print(f"Records from {source_file_name} up to {max_last_updated_date_str} has been successfully written to {adls_path} using {load_type} load")
+            
+        
 
 # COMMAND ----------
 
-metadata_df = spark.sql(f"""select * from revenue_cycle_dev.metadata.source_to_landing_control_table 
-where emr = '{v_EMR}'
--- and source_file_name = "ehr_Allergies"  
-and last_modified_date > DATE('2025-01-01') -- in final code it will be less than current date
-;""")
+source_to_landing_control_table('AdvMD')
 
 # COMMAND ----------
 
-display(metadata_df)
+# MAGIC %sql
+# MAGIC
+# MAGIC select * from logging.log_merge
 
 # COMMAND ----------
 
-from datetime import datetime
+# MAGIC %md
+# MAGIC 1. File extension
+# MAGIC 2. If table doesnt exist
+# MAGIC 3. Least data scanning
+# MAGIC 4. What if it runs twice
+# MAGIC 5. is active
+# MAGIC 6. load type
+# MAGIC 7. attribute count DQ check
+# MAGIC 8. frequency - daily
+# MAGIC 9. Business logic
 
-# Set up parameters
-server_name = "server-p.database.windows.net"
-database_name = "rco_stage"
-username = "Preet@server-p"  # Use the correct username format
-password = "ABCabc123@"  # Replace with your password
-# table_name = "ehr_Allergies"  # Replace with your schema and table name
-# JDBC URL
-url = f"jdbc:sqlserver://{server_name}:1433;database={database_name};user={username};password={password};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
-# Get the current date
-
-storage_container = "adlsgen2mdftest"
-directory = "landing"
-current_date = datetime.now().strftime('%Y_%m_%d')
-
-
-# Define the ADLS Gen2 path to save the results
-
-
-
-
-# Replace with your ADLS Gen2 path
+# COMMAND ----------
 
 
 
 # COMMAND ----------
 
 
-source_file_name_col = metadata_df.select("source_file_name").collect()
-attributes_name_col = metadata_df.select("attributes_name").collect()
-incremental_key_col = metadata_df.select("incremental_key").collect()
-destination_file_path_col = metadata_df.select("destination_file_path").collect()
-# last_modified_date_col = metadata_df.select("last_modified_date").collect()
-for i in range(metadata_df.count()):
-    source_file_name=source_file_name_col[i][0]
-    attributes_name=attributes_name_col[i][0]
-    incremental_key=incremental_key_col[i][0]
-    destination_file_path=destination_file_path_col[i][0]
-    destination_file_path = destination_file_path.replace('YYYY_MM_DD', current_date)
-    # last_modified_date = last_modified_date_col[i][0]
-    incremental_value = last_modified_date  # Value to filter rows
-    # Construct the SQL query dynamically
-    query_all_cols = f"SELECT {attributes_name} FROM {source_file_name} "
-    query_max_last_updated_date = f"SELECT max({incremental_key}) as max_last_updated_date FROM {source_file_name} "
-    adls_path = f'abfss://{directory}@{storage_container}.dfs.core.windows.net/{destination_file_path}'
-    
-    remote_table = (spark.read
-                    .format("jdbc")
-                    .option("url", url)  # Provide the JDBC URL
-                    .option("query", query_all_cols)  # Pass the dynamically constructed query
-                    .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver")  # Specify the JDBC driver
-                    .load()
-                    )
-    
-    max_last_updated_date = (spark.read
-                .format("jdbc")
-                .option("url", url)  # Provide the JDBC URL
-                .option("query", query_max_last_updated_date)  # Pass the dynamically constructed query
-                .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver")  # Specify the JDBC driver
-                .load()
-                )
-    
-    max_last_updated_date = max_last_updated_date.collect()[0][0]
-    max_last_updated_date_str = max_last_updated_date.strftime('%Y-%m-%d')
+
+# COMMAND ----------
 
 
-    # Save the DataFrame to ADLS Gen2 in Snappy Parquet format
-    remote_table.write \
-    .mode("overwrite") \
-    .option("compression", "snappy") \
-    .parquet(adls_path)
 
-    spark.sql(f"UPDATE revenue_cycle_dev.metadata.source_to_landing_control_table SET last_modified_date = '{max_last_updated_date_str}' where source_file_name = '{source_file_name}' and emr = '{v_EMR}' ") 
+# COMMAND ----------
 
-    print(f"Records from {source_file_name} up to {max_last_updated_date_str} has been successfully written to {adls_path}")
-    
+
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+check_data_existence_in_odbc('mf_facilities')
 
 # COMMAND ----------
 
@@ -241,237 +455,4 @@ def create_bronze_table(table_name, schema_name):
         print(f"Table {table_full_name} already exists.")
 
     print(f"Table creation process completed for {table_full_name}.")
-
-
-# COMMAND ----------
-
-from pyspark.sql.functions import col, current_timestamp
-from delta.tables import DeltaTable
-
-def meta_source_to_target_table(table_name):
-    # Variables for ETL columns
-    v_ETLBatchID = 1
-    v_ETLBatchTS = "2025-01-01 10:00:00"
-    v_ETLOriginalTS = "2025-01-01 10:00:00"
-    v_practice = "SKI"
-
-    # Create logging schema and table if not exists -- followed in Merge to ODS
-    spark.sql("CREATE SCHEMA IF NOT EXISTS logging;")
-    spark.sql("""
-            CREATE TABLE IF NOT EXISTS logging.log_merge (
-                LogID BIGINT GENERATED BY DEFAULT AS IDENTITY, 
-                TableName STRING,
-                Practice STRING,
-                ETLBatchID INT,
-                ETLBatchTS TIMESTAMP,
-                StartTime TIMESTAMP,
-                EndTime TIMESTAMP
-            ) USING DELTA;
-    """)
-
-    # Log the start time in MST timezone
-    from datetime import datetime
-    import pytz
-    mst = pytz.timezone('MST')
-    start_time = datetime.now(mst)
-
-    # Insert initial log entry
-    spark.sql(f"""
-        INSERT INTO logging.log_merge (TableName, Practice, ETLBatchID, ETLBatchTS, StartTime)
-        VALUES ('{table_name}', '{v_practice}', {v_ETLBatchID}, '{v_ETLBatchTS}', '{start_time}')
-    """)
-
-    # Fetch metadata from control table
-    metadata_df = spark.sql(f"""SELECT * FROM hive_metastore.default.meta_source_to_target_table  
-                             WHERE Target_table = '{table_name}'
-                             AND Isactive = 1
-                             AND EMR = '{v_EMR}' """
-                             )
-    # Display metadata for debugging
-    print(display(metadata_df))
-    
-    if metadata_df.count() == 0:
-        raise ValueError(f"No active metadata found for table: {table_name}")
-
-    # Check Business Logic
-    business_logic = metadata_df.select("Business_logic").first()["Business_logic"]
-
-    # If Business Logic is 1, execute notebook
-    if business_logic == 1:
-        try:
-            # Get notebook path
-            notebook_path = metadata_df.select("Notebook").first()["Notebook"]
-            
-            # Check if notebook path is empty or null
-            if not notebook_path or notebook_path.strip() == "":
-                raise ValueError(f"Notebook not found for table: {table_name}")
-
-            # Execute the specified notebook
-            print(f"Executing notebook: {notebook_path}")
-            result = dbutils.notebook.run(notebook_path, 0)  # Timeout is 0 (no timeout)
-            print(f"Notebook execution result: {result}")
-            return  # Exit the function after notebook execution
-        
-        except Exception as e:
-            # Catch errors related to the notebook execution or missing path
-            error_message = f"Error executing notebook for table {table_name}: {str(e)}"
-            print(error_message)
-            # raise ValueError(error_message)
-            return
-
-    # If Business Logic is not 1, execute the existing pipeline
-    # Extract metadata details
-    source_table_name = metadata_df.select("Source_Table_Name").first()["Source_Table_Name"]
-    target_table_name = metadata_df.select("Target_table").first()["Target_table"]
-    source_schema_name = metadata_df.select("Source_Schema").first()["Source_Schema"]
-    target_schema_name = metadata_df.select("Target_Schema").first()["Target_Schema"]
-    load_type = metadata_df.select("load_type").first()["load_type"]
-
-    # Fetch active columns
-    active_columns = metadata_df.select(
-        "Source_column_id", 
-        "Target_column_id",
-        "Target_column_data_type",
-        "Source_default_value"
-    ).collect()
-
-    # Fetch primary keys
-    primary_keys = metadata_df.filter(col("Primary_key") == 1).select("Target_column_id").collect()
-    primary_keys = [f"t.`{row['Target_column_id']}` = s.`{row['Target_column_id']}`" for row in primary_keys]
-    on_condition = " AND ".join(primary_keys)
-
-    # Prepare column mappings with forced data type casting and default handling
-    mapped_columns = []
-    for row in active_columns:
-        src_col = row['Source_column_id']  # Source column
-        tgt_col = row['Target_column_id']  # Target column
-        tgt_type = row['Target_column_data_type']  # Target data type
-        default_value = row['Source_default_value']  # Default value
-
-        # Handle ETL Columns using widget values
-        if tgt_col == "ETLBatchID":
-            cast_expr = f"CAST({v_ETLBatchID} AS {tgt_type}) AS `{tgt_col}`"
-        elif tgt_col == "ETLBatchTS":
-            cast_expr = f"CAST('{v_ETLBatchTS}' AS {tgt_type}) AS `{tgt_col}`"
-        elif tgt_col == "ETLOriginalTS":
-            cast_expr = f"CAST('{v_ETLOriginalTS}' AS {tgt_type}) AS `{tgt_col}`"
-        elif src_col:  # If source column is not null, use it
-            cast_expr = f"CAST(`{src_col}` AS {tgt_type}) AS `{tgt_col}`"
-        else:  # If source column is null, use the default value
-            if default_value == "Null":  # Set default as empty string ('') if "Null"
-                cast_expr = f"CAST('' AS {tgt_type}) AS `{tgt_col}`"
-            else:  # Use specified default value
-                cast_expr = f"CAST('{default_value}' AS {tgt_type}) AS `{tgt_col}`"
-
-        # Add the expression to mapped columns
-        mapped_columns.append(cast_expr)
-
-    # Create full table names
-    source_table_full_name = f"{source_schema_name}.{source_table_name}"
-    target_table_full_name = f"{target_schema_name}.{target_table_name}"
-
-    # Create catalog and schema if not exists
-    spark.sql("CREATE CATALOG IF NOT EXISTS Revenue_cycle_DEV;")
-    spark.sql("USE CATALOG Revenue_cycle_DEV;")
-    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {target_schema_name};")
-
-    # Create temp view for source data with forced casting and default handling
-    mapped_columns_query = ", ".join(mapped_columns)
-    query = f"CREATE OR REPLACE TEMP VIEW silver_update AS SELECT {mapped_columns_query} FROM {source_table_full_name};"
-    print("Query for silver_update: ", query) # Only for debugging
-    spark.sql(query)
-
-    # Check if target table exists
-    table_exists = spark._jsparkSession.catalog().tableExists(target_table_full_name)
-
-    # Create target table dynamically if it doesn't exist
-    if not table_exists:
-        print(f"Target table {target_table_full_name} does not exist. Creating it...")
-
-        # Generate schema dynamically
-        target_schema = ", ".join([
-            f"`{row['Target_column_id'].strip()}` {row['Target_column_data_type'].strip().upper()}"
-            for row in active_columns
-        ])
-
-        # Create table query
-        create_table_query = f"""
-            CREATE TABLE {target_table_full_name} (
-                {target_schema}
-            ) 
-            USING DELTA
-            TBLPROPERTIES (
-                'delta.columnMapping.mode' = 'name'
-            )
-        """
-        print("Create Table Query: ", create_table_query) # only for debugging
-        spark.sql(create_table_query)
-        print(f"Target table {target_table_full_name} created successfully.")
-
-    # Handle Incremental or Full Load
-    if load_type == "Incremental":
-
-        # Calculating total number of records in Bronze table
-        total_records = spark.sql("SELECT COUNT(*) AS count FROM silver_update").collect()[0]["count"]
-
-        # Count non-matching records that will be inserted from Bronze into Silver table
-        non_matching_records_query = f"""
-        SELECT COUNT(*) AS count
-        FROM silver_update s
-        LEFT JOIN {target_table_full_name} t
-        ON {on_condition}
-        WHERE { " OR ".join([f"t.`{col['Target_column_id']}` IS NULL" for col in active_columns]) }
-        """
-        non_matching_records = spark.sql(non_matching_records_query).collect()[0]["count"]
-
-
-        # Prepare column mappings for MERGE without casting
-        update_columns = []
-        insert_columns = []
-        insert_values = []
-
-        for row in active_columns:
-            tgt_col = row['Target_column_id']
-
-            # No casting here, directly map columns from silver_update view
-            update_columns.append(f"t.`{tgt_col}` = s.`{tgt_col}`")
-            insert_columns.append(f"`{tgt_col}`")
-            insert_values.append(f"s.`{tgt_col}`")
-
-        # Dynamic MERGE query without casting
-        merge_query = f"""
-        MERGE INTO {target_table_full_name} t
-        USING silver_update s
-        ON {on_condition}
-        WHEN MATCHED THEN
-        UPDATE SET
-            {', '.join(update_columns)}
-        WHEN NOT MATCHED THEN
-        INSERT ({', '.join(insert_columns)})
-        VALUES ({', '.join(insert_values)});
-        """
-        print("Merge Query: ", merge_query)  # Print query only for debugging
-        spark.sql(merge_query)
-
-        # Print the results
-        print(f"Out of {total_records} records in {source_table_full_name}, {non_matching_records} were inserted into the {target_table_full_name} using {load_type} load from EMR {v_EMR}.")
-
-    elif load_type == "Full":
-        source_df = spark.sql(f"SELECT * FROM silver_update")
-        source_df.write.format("delta").mode("overwrite").saveAsTable(target_table_full_name)
-        # Count inserted records for full load
-        inserted_count = source_df.count()
-        print(f"{inserted_count} records were inserted into the {target_table_full_name} using {load_type} load from EMR {v_EMR} .")
-
-    else:
-        raise ValueError(f"Unsupported load type: {load_type}")
-    
-
-    # Log the end time
-    end_time = datetime.now(mst)
-    spark.sql(f"""
-        UPDATE logging.log_merge
-        SET EndTime = '{end_time}'
-        WHERE TableName = '{table_name}' AND StartTime = '{start_time}'
-    """)
 
