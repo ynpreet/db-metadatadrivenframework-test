@@ -120,10 +120,6 @@ source_to_landing_control_table(v_EMR)
 
 # COMMAND ----------
 
-check_data_existence_in_odbc('mf_facilities')
-
-# COMMAND ----------
-
 
 
 # COMMAND ----------
@@ -136,70 +132,4 @@ check_data_existence_in_odbc('mf_facilities')
 
 # COMMAND ----------
 
-
-
-# COMMAND ----------
-
-from pyspark.sql.functions import col, collect_list
-
-def create_bronze_table(table_name, schema_name):
-    # Fetch metadata from Bronze Layer Control Table
-    metadata_df = spark.sql(f"""
-        SELECT * 
-        FROM hive_metastore.default.meta_source_to_target_table 
-        WHERE Target_table = '{table_name}' AND Source_Schema = '{schema_name}' AND Isactive = 1 and EMR = '{v_EMR}' and Source_column_id IS NOT NULL
-    """)
-    print(display(metadata_df))
-
-    
-
-    # Check if metadata exists for the table
-    if metadata_df.count() == 0:
-        raise ValueError(f"No active metadata found for table: {schema_name}.{table_name}")
-
-    # Extract column details from metadata
-    source_table_name = metadata_df.select("Source_Table_Name").first()["Source_Table_Name"]
-    columns = metadata_df.select("Source_column_id", "Source_column_data_type").collect()
-
-    # Build schema dynamically
-    # Build schema dynamically, keeping original column names with backticks (` `)
-    schema = ", ".join([
-        f"`{row['Source_column_id'].strip()}` {row['Source_column_data_type'].strip().upper()}" 
-        for row in columns
-    ])
-
-    # Add inserted_at column
-    schema += ", `inserted_at` TIMESTAMP"
-
-    spark.sql("CREATE catalog IF NOT EXISTS Revenue_cycle_DEV;")
-    spark.sql("USE CATALOG Revenue_cycle_DEV;")
-
-    # Build full table name
-    table_full_name = f"{schema_name}.{source_table_name}"
-
-    # Check if table already exists
-    table_exists = spark._jsparkSession.catalog().tableExists(table_full_name)
-
-    # Create table only if it does not exist
-    if not table_exists:
-        spark.sql(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
-        spark.sql(f"USE SCHEMA {schema_name}")
-        print(f"Creating table {table_full_name}...")
-        
-        create_table_query = f"""
-            CREATE TABLE {table_full_name} (
-                {schema}
-            ) 
-            USING DELTA
-            TBLPROPERTIES (
-                'delta.columnMapping.mode' = 'name'
-            )
-        """
-        print(create_table_query)  # Debugging the query
-        spark.sql(create_table_query)
-        print(f"Table {table_full_name} created successfully.")
-    else:
-        print(f"Table {table_full_name} already exists.")
-
-    print(f"Table creation process completed for {table_full_name}.")
 
