@@ -257,3 +257,38 @@ def source_to_landing_control_table(user_emr):
         print(f"Records from {source_file_name} up to {max_last_updated_date_str} has been successfully written to {adls_path} using {load_type} load")
             
         
+
+# COMMAND ----------
+
+# Used in following Notebooks: 
+# - bronze_to_silver_control_table.py
+# Objective: To create source to landing control table from CSV file
+
+
+
+def create_bronze_to_silver_control_table():
+        # To be deleted after code if finalized
+    spark.sql(f"""
+    DROP TABLE IF EXISTS revenue_cycle_dev.metadata.source_to_landing_control_table;
+    """)
+
+    spark.sql(f"""
+    CREATE TABLE revenue_cycle_dev.metadata.source_to_landing_control_table
+    USING DELTA
+    LOCATION '{source_to_landing_control_table_path}';
+    """)
+
+    # To be deleted after code if finalized
+
+    source_to_landing_control_table_df = spark.read.format("csv").load(source_to_landing_control_csv_path,header="True")
+
+    source_to_landing_control_table_df.write \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+        .option("header", "true") \
+    .option("path", 'abfss://metadata@adlsgen2mdftest.dfs.core.windows.net/source_to_landing/') \
+    .saveAsTable("revenue_cycle_dev.metadata.source_to_landing_control_table") # External table
+
+    print("source_to_landing_control_table created as revenue_cycle_dev.metadata.source_to_landing_control_table")
+
+

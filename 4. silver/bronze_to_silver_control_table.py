@@ -3,8 +3,12 @@
 
 # COMMAND ----------
 
+# MAGIC %run "../1. includes/common_functions"
+
+# COMMAND ----------
+
 # MAGIC %sql
-# MAGIC -- DROP TABLE IF EXISTS hive_metastore.default.meta_source_to_target_table;
+# MAGIC -- DROP TABLE IF EXISTS hive_metastore.default.bronze_to_silver_control_table;
 # MAGIC -- DROP CATALOG AdvMD;
 # MAGIC -- DROP CATALOG Athena;
 # MAGIC
@@ -30,22 +34,15 @@
 dbutils.widgets.text("p_EMR", "")
 v_EMR  = dbutils.widgets.get("p_EMR")
 
-# COMMAND ----------
-
 dbutils.widgets.text("p_ETLBatchID", "")
 v_ETLBatchID  = dbutils.widgets.get("p_ETLBatchID")
-
-# COMMAND ----------
 
 dbutils.widgets.text("p_ETLBatchTS", "")
 v_ETLBatchTS  = dbutils.widgets.get("p_ETLBatchTS")
 
-# COMMAND ----------
-
 dbutils.widgets.text("p_ETLOriginalTS", "")
 v_ETLOriginalTS  = dbutils.widgets.get("p_ETLOriginalTS")
 
-# COMMAND ----------
 
 dbutils.widgets.text("p_practice", "")
 v_practice  = dbutils.widgets.get("p_practice")
@@ -53,17 +50,33 @@ v_practice  = dbutils.widgets.get("p_practice")
 # COMMAND ----------
 
 
-meta_source_to_target_table_df = spark.read.csv(meta_source_to_target_table_path,header=True, inferSchema=True)
-meta_source_to_target_table_df.write.format("delta").option("delta.columnMapping.mode", "name").mode("overwrite").saveAsTable("hive_metastore.default.meta_source_to_target_table")
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+
+bronze_to_silver_control_table_df = spark.read.csv(bronze_to_silver_control_table_path,header=True, inferSchema=True)
+bronze_to_silver_control_table_df.write.format("delta").option("delta.columnMapping.mode", "name").mode("overwrite").saveAsTable("hive_metastore.default.bronze_to_silver_control_table")
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC select * from hive_metastore.default.meta_source_to_target_table
+# MAGIC select * from hive_metastore.default.bronze_to_silver_control_table
 
 # COMMAND ----------
 
-meta_source_to_target_table_df.printSchema()
+bronze_to_silver_control_table_df.printSchema()
 
 # COMMAND ----------
 
@@ -73,7 +86,7 @@ def create_bronze_table(table_name, schema_name):
     # Fetch metadata from Bronze Layer Control Table
     metadata_df = spark.sql(f"""
         SELECT * 
-        FROM hive_metastore.default.meta_source_to_target_table 
+        FROM hive_metastore.default.bronze_to_silver_control_table 
         WHERE Target_table = '{table_name}' AND Source_Schema = '{schema_name}' AND Isactive = 1 and EMR = '{v_EMR}' and Source_column_id IS NOT NULL
     """)
     print(display(metadata_df))
@@ -192,7 +205,7 @@ def bronze_to_silver_control_table(table_name):
     """)
 
     # Fetch metadata from control table
-    metadata_df = spark.sql(f"""SELECT * FROM hive_metastore.default.meta_source_to_target_table  
+    metadata_df = spark.sql(f"""SELECT * FROM hive_metastore.default.bronze_to_silver_control_table  
                              WHERE Target_table = '{table_name}'
                              AND Isactive = 1
                              AND EMR = '{v_EMR}' """
@@ -388,8 +401,8 @@ def bronze_to_silver_control_table(table_name):
 
 # COMMAND ----------
 
-# meta_source_to_target_table('Allergy')
-meta_source_to_target_table('AppointmentType')
+# bronze_to_silver_control_table('Allergy')
+bronze_to_silver_control_table('AppointmentType')
 
 # COMMAND ----------
 
@@ -465,7 +478,7 @@ meta_source_to_target_table('AppointmentType')
 
 # COMMAND ----------
 
-meta_source_to_target_table('AppointmentType')
+bronze_to_silver_control_table('AppointmentType')
 
 # COMMAND ----------
 
