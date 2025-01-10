@@ -24,47 +24,29 @@
 dbutils.widgets.text("p_EMR", "")
 v_EMR  = dbutils.widgets.get("p_EMR")
 
-# COMMAND ----------
-
 dbutils.widgets.text("p_directory_for_storing_landing", "")
 v_directory  = dbutils.widgets.get("p_directory_for_storing_landing")
 #landing
-
-# COMMAND ----------
 
 dbutils.widgets.text("p_storage_container_for_landing", "")
 v_storage_container_for_landing  = dbutils.widgets.get("p_storage_container_for_landing")
 #adlsgen2mdftest
 
-# COMMAND ----------
-
 dbutils.widgets.text("p_Practice_ETL_ID", "")
 v_Practice_ETL_ID  = dbutils.widgets.get("p_Practice_ETL_ID")
 #9997
 
-# COMMAND ----------
-
 dbutils.widgets.text("p_ETLBatchID", "")
 v_ETLBatchID  = dbutils.widgets.get("p_ETLBatchID")
-
-# COMMAND ----------
 
 dbutils.widgets.text("p_ETLBatchTS", "")
 v_ETLBatchTS  = dbutils.widgets.get("p_ETLBatchTS")
 
-# COMMAND ----------
-
 dbutils.widgets.text("p_ETLOriginalTS", "")
 v_ETLOriginalTS  = dbutils.widgets.get("p_ETLOriginalTS")
 
-# COMMAND ----------
-
 dbutils.widgets.text("p_practice", "")
 v_practice  = dbutils.widgets.get("p_practice")
-
-# COMMAND ----------
-
-
 
 # COMMAND ----------
 
@@ -86,10 +68,6 @@ create_source_to_landing_control_table()
 
 # COMMAND ----------
 
-
-
-# COMMAND ----------
-
 source_to_landing_control_table(v_EMR)
 
 # COMMAND ----------
@@ -97,39 +75,3 @@ source_to_landing_control_table(v_EMR)
 # MAGIC %sql
 # MAGIC -- to be deleted after code gets productionized
 # MAGIC select * from logging.log_merge
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
