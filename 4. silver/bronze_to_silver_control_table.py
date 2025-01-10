@@ -50,22 +50,6 @@ v_practice  = dbutils.widgets.get("p_practice")
 # COMMAND ----------
 
 
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
-
-# COMMAND ----------
-
-
 bronze_to_silver_control_table_df = spark.read.csv(bronze_to_silver_control_table_path,header=True, inferSchema=True)
 bronze_to_silver_control_table_df.write.format("delta").option("delta.columnMapping.mode", "name").mode("overwrite").saveAsTable("hive_metastore.default.bronze_to_silver_control_table")
 
