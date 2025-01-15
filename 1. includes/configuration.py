@@ -13,6 +13,65 @@ spark.conf.set(
 
 # COMMAND ----------
 
+#catalog and schema names
+
+v_catalog_name = "revenue_cycle_dev"
+v_metadata_schema = "metadata"
+v_landing_schema= "landing"
+v_bronze_schema = "bronze"
+v_silver_schema = "silver"
+v_gold_schema = "gold"
+
+#control table variables
+v_storage_account_name = "adlsgen2mdftest"
+v_container_name = "metadata"
+v_metadata_directory = "control-tables"
+v_landing_layer_control_table_file_name = "landing_layer_control_table.csv"
+v_bronze_layer_control_table_file_name = "bronze_layer_control_table.csv"
+v_silver_layer_control_table_file_name = "silver_layer_control_table.csv"
+v_gold_layer_control_table_file_name = "gold_layer_control_table.csv"
+v_connection_layer_control_file_name = "connection_layer_control_table.csv"
+v_practice_key_layer_control_file_name = "pracetice_key_layer_control_table.csv"
+
+
+
+v_landing_layer_control_table_file_name = "landing_layer_control_table.csv"
+v_bronze_layer_control_table_file_name = "bronze_layer_control_table.csv"
+v_silver_layer_control_table_file_name = "silver_layer_control_table.csv"
+v_gold_layer_control_table_file_name = "gold_layer_control_table.csv"
+v_connection_layer_control_file_name = "connection_layer_control_table.csv"
+v_practice_key_layer_control_file_name = "pracetice_key_layer_control_table.csv"
+
+
+
+# COMMAND ----------
+
+# Storage Account and Container Details of the Control Tables and Schemas
+
+storage_account_name = "adlsgen2mdftest"
+container_name = "control-tables"
+metadata_directory = "metadata"
+
+# File Paths
+v_landing_control_csv_path = f"abfss://{v_container_name}@{v_storage_account_name}.dfs.core.windows.net/{v_metadata_directory}/{v_landing_layer_control_table_file_name}"
+
+v_bronze_layer_control_csv_path = f"abfss://{v_container_name}@{v_storage_account_name}.dfs.core.windows.net/{v_metadata_directory}/{v_bronze_layer_control_table_file_name}"
+
+
+v_silver_layer_control_csv_path = f"abfss://{v_container_name}@{v_storage_account_name}.dfs.core.windows.net/{v_metadata_directory}/{v_silver_layer_control_table_file_name}"
+
+
+v_gold_layer_control_csv_path = f"abfss://{v_container_name}@{v_storage_account_name}.dfs.core.windows.net/{v_metadata_directory}/{v_gold_layer_control_table_file_name}"
+
+
+v_connection_layer_control_csv_path = f"abfss://{v_container_name}@{v_storage_account_name}.dfs.core.windows.net/{v_metadata_directory}/{v_connection_layer_control_file_name}"
+
+v_practice_key_layer_control_csv_path = f"abfss://{v_container_name}@{v_storage_account_name}.dfs.core.windows.net/{v_metadata_directory}/{v_practice_key_layer_control_file_name}"
+
+
+
+# COMMAND ----------
+
 # Storage Account and Container Details of the Control Tables and Schemas
 
 storage_account_name = "adlsgen2mdftest"
@@ -32,6 +91,10 @@ print("Landing to Bronze Control Table Path:", landing_to_bronze_control_csv_pat
 print("Meta Source to Target Table Path:", meta_source_to_target_csv_path)
 print("Silver Layer Control Table Path:", silver_layer_control_csv_path)
 print("Source to Landing Control Table Path:", source_to_landing_control_csv_path)
+
+# COMMAND ----------
+
+
 
 # COMMAND ----------
 

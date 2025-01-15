@@ -13,11 +13,12 @@
 
 # COMMAND ----------
 
-# MAGIC %run "../1. includes/configuration"
+# MAGIC %run "../1. includes/configuration_parameterized"
 
 # COMMAND ----------
 
-# MAGIC %run "../1. includes/common_functions"
+# MAGIC %run "../1. includes/common_functions_parameterized"
+# MAGIC
 
 # COMMAND ----------
 
