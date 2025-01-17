@@ -84,3 +84,23 @@ source_to_landing_control_table(v_EMR)
 # MAGIC %sql
 # MAGIC -- to be deleted after code gets productionized
 # MAGIC select * from logging.log_merge
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC
+# MAGIC SHOW GRANTS ON EXTERNAL LOCATION landing;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SHOW GRANTS ON EXTERNAL LOCATION metadata;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SHOW GRANTS ON EXTERNAL LOCATION pappu;
+
+# COMMAND ----------
+
+
