@@ -1,0 +1,129 @@
+Based on the shared images and your requirements, here’s a structured solution for implementing logging across multiple Databricks notebooks, ensuring logs are captured, and stored in an Azure container even if a notebook fails.
+
+Step 1: Create a Logging Initialization Function
+
+This function initializes the logger and ensures logs are written to Databricks File System (DBFS), which can later be moved to Azure.
+
+import logging
+import time
+import datetime
+import sys
+
+def initialize_logger(notebook_name):
+    """
+    Initializes a logger for tracking Databricks notebook executions.
+
+    Args:
+        notebook_name (str): Name of the current notebook.
+    
+    Returns:
+        logger: Configured logger instance.
+        log_file_path: Path of the log file.
+    """
+    # Generate unique timestamp for log file
+    file_date = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M-%S')
+    
+    # Log file path in DBFS
+    log_file_name = f"custom_log_{notebook_name}_{file_date}.log"
+    log_file_path = f"/dbfs/logging/{log_file_name}"
+
+    # Configure logger
+    logger = logging.getLogger('DatabricksLogger')
+    logger.setLevel(logging.DEBUG)
+
+    # Create file handler
+    fh = logging.FileHandler(log_file_path, mode='w')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+
+    # Add handler to logger
+    logger.addHandler(fh)
+    
+    # Stream logs to Databricks console
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    logger.info(f"Logging initialized for notebook: {notebook_name}")
+    
+    return logger, log_file_path
+
+Step 2: Logging in Each Notebook
+
+Each notebook should call the initialize_logger function at the beginning to start logging.
+
+# Initialize logger for current notebook
+notebook_name = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get().split('/')[-1]
+logger, log_file_path = initialize_logger(notebook_name)
+
+logger.info("Notebook execution started.")
+
+try:
+    # Simulate some processing steps
+    logger.info("Processing data...")
+
+    # Example code (replace with actual logic)
+    df = spark.range(10)
+    df.show()
+
+    logger.info("Data processing completed successfully.")
+except Exception as e:
+    logger.error(f"Error encountered: {str(e)}")
+    raise  # Ensure the error propagates to the orchestrator
+finally:
+    logger.info("Notebook execution completed.")
+
+Step 3: Move Logs to Azure After Execution
+
+Once all notebooks finish execution, move the logs to an Azure Data Lake Storage (ADLS) container.
+
+Save log to Azure using Databricks CLI:
+
+def upload_logs_to_adls(log_file_path, storage_account_name, container_name):
+    """
+    Uploads the log file from DBFS to Azure Data Lake Storage.
+
+    Args:
+        log_file_path (str): Path of the log file in DBFS.
+        storage_account_name (str): Azure Storage Account Name.
+        container_name (str): Azure Storage Container Name.
+    """
+    destination_path = f"abfss://{container_name}@{storage_account_name}.dfs.core.windows.net/logs/"
+    try:
+        dbutils.fs.cp(log_file_path, destination_path)
+        logger.info(f"Log file {log_file_path} uploaded to {destination_path}")
+    except Exception as e:
+        logger.error(f"Failed to upload log file: {str(e)}")
+
+# Call the function to upload logs
+upload_logs_to_adls(log_file_path, "your_storage_account", "your_container_name")
+
+Step 4: Handling Workflow Failures
+
+In your orchestrating notebook, handle failures by checking return values from child notebooks:
+
+try:
+    dbutils.notebook.run("notebook_1", 0)
+    dbutils.notebook.run("notebook_2", 0)
+    dbutils.notebook.run("notebook_3", 0)
+    logger.info("All notebooks executed successfully.")
+except Exception as e:
+    logger.error(f"Workflow failed due to: {str(e)}")
+    upload_logs_to_adls(log_file_path, "your_storage_account", "your_container_name")
+    raise
+
+Step 5: Cleanup and Shutdown Logging
+
+Once the entire workflow is completed, clean up the logging:
+
+logging.shutdown()
+print(f"Log file saved to: {log_file_path}")
+
+Summary of Implementation
+	1.	Logging Setup: Each notebook initializes logging using initialize_logger().
+	2.	Tracking Activities: Logs key actions and errors in a structured format.
+	3.	Error Handling: Any failures are logged and raised appropriately.
+	4.	Log Storage: Logs are saved to ADLS automatically post-execution.
+	5.	Monitoring Progress: Logs provide visibility into workflow status.
+
+This setup ensures robust tracking across multiple notebooks, with logs efficiently stored for analysis even in case of failures.
