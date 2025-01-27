@@ -219,5 +219,50 @@ display(dbutils.fs.ls("dbfs:/Workspace/Repos/your-email@example.com/project-name
 Let me know if you need further clarification or assistance!
 
 
+import logging
+import os
+
+# Define your workspace path
+workspace_path = "/Workspace/Users/pmehta@panoramichealth.com/data-modernization-phase2/data-manipulation-project/1. includes/logging/"
+log_file_name = "databricks_log.log"
+dbfs_path = f"/dbfs{workspace_path.replace('/Workspace', '')}{log_file_name}"
+
+# Ensure the folder exists using dbutils
+try:
+    dbutils.fs.mkdirs(workspace_path)
+except Exception as e:
+    print(f"Error creating directory: {str(e)}")
+
+# Setup logger
+logger = logging.getLogger("databricks_logger")
+logger.setLevel(logging.INFO)
+
+# Stream handler for console output
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
+
+# File handler to write logs to the specified workspace path
+try:
+    file_handler = logging.FileHandler(dbfs_path)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+except Exception as e:
+    logger.error(f"Failed to initialize FileHandler: {str(e)}")
+
+# Log messages
+logger.debug("Debug message: Useful for troubleshooting.")
+logger.info("Info message: General information.")
+logger.warning("Warning message: Indicates potential issues.")
+logger.error("Error message: An error occurred.")
+logger.critical("Critical message: Severe issues requiring immediate attention.")
+
+# Verify the file creation
+display(dbutils.fs.ls(workspace_path))
+
+
 
 
