@@ -265,4 +265,26 @@ display(dbutils.fs.ls(workspace_path))
 
 
 
+import logging
+import time
+import datetime
+
+file_date = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M-%S')
+p_dir = "/dbfs/"
+p_filename = "custom_log_" + file_date + ".log"
+p_logfile = p_dir + p_filename
+
+print(p_logfile)
+
+# Create logger with 'Custom_Log'
+logger = logging.getLogger("log4j")
+logger.setLevel(logging.DEBUG)
+
+# Create file handler which logs even debug messages
+fh = logging.FileHandler(p_logfile, mode="w")
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
+
 
