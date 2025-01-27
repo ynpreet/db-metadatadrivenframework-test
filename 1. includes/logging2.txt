@@ -287,4 +287,37 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 
 
+import logging
+import os
+
+# Set the log file path in Databricks Workspace
+log_file_path = "/Workspace/Users/pmehta@panoramichealth.com/data-modernization-phase2/data-manipulation-project/1. includes/logging/databricks_log.log"
+
+# Create logger
+logger = logging.getLogger("databricks_logger")
+logger.setLevel(logging.INFO)
+
+# Check if logger already has handlers
+if not logger.hasHandlers():
+    # Create file handler
+    file_handler = logging.FileHandler(log_file_path, mode="w")
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+# Add some logs
+logger.info("This is an INFO log")
+logger.warning("This is a WARNING log")
+logger.error("This is an ERROR log")
+logger.critical("This is a CRITICAL log")
+
+print(f"Log file created at: {log_file_path}")
+
+# Verify the file creation
+try:
+    with open(log_file_path, "r") as f:
+        print("Log file content:\n", f.read())
+except Exception as e:
+    print("Error while accessing log file:", e)
+
 
