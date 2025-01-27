@@ -1,0 +1,223 @@
+Here’s the updated logging setup that follows your preferred format and configuration while achieving the goal of logging to both the Databricks includes folder and Azure Storage.
+
+Step 1: Initialize Logger Function
+
+This function initializes the logger with your preferred format and ensures that logs are written both locally to the includes folder and later transferred to Azure.
+
+import logging
+import datetime
+from logging.handlers import RotatingFileHandler
+
+def initialize_logger(notebook_name):
+    # Define log directory and filename
+    log_dir = "dbfs:/Workspace/includes/"
+    log_filename = f"pipeline_execution_{datetime.datetime.now().strftime('%Y-%m-%d')}.log"
+    log_file_path = f"{log_dir}{log_filename}"
+
+    # Ensure the 'includes' directory exists in Databricks
+    dbutils.fs.mkdirs(log_dir)
+
+    # Create logger
+    logger = logging.getLogger("DatabricksPipelineLogger")
+    logger.setLevel(logging.INFO)
+
+    # Define log format
+    log_format = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    # Avoid duplicate handlers
+    if not logger.handlers:
+        # File handler to write logs locally in Databricks includes folder
+        file_handler = logging.FileHandler(f"/dbfs/Workspace/includes/{log_filename}")
+        file_handler.setFormatter(log_format)
+        logger.addHandler(file_handler)
+
+        # Stream handler to print logs in Databricks console
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(log_format)
+        logger.addHandler(stream_handler)
+
+    return logger, log_file_path
+
+Step 2: Use Logger in Your Notebooks
+
+In each notebook, initialize the logger and log relevant messages:
+
+v_notebook_name = "bronze_layer_control_table"
+logger, log_file_path = initialize_logger(v_notebook_name)
+
+logger.info("Logging initialized for notebook execution.")
+
+try:
+    # Simulating a data processing step
+    df = spark.range(10)
+    df.show()
+    logger.info("Data processed successfully.")
+except Exception as e:
+    logger.error(f"Error occurred: {str(e).splitlines()[0]}")
+finally:
+    logger.info("Notebook execution completed.")
+
+Step 3: Move Log File to Azure Storage
+
+Once all the notebooks have completed execution, you can copy the log file to an Azure Storage container.
+
+def move_log_to_azure(storage_account_name, container_name):
+    # Define source and destination paths
+    source_path = f"dbfs:/Workspace/includes/pipeline_execution_{datetime.datetime.now().strftime('%Y-%m-%d')}.log"
+    destination_path = f"abfss://{container_name}@{storage_account_name}.dfs.core.windows.net/logging/{source_path.split('/')[-1]}"
+
+    try:
+        dbutils.fs.cp(source_path, destination_path)
+        logger.info(f"Log file successfully copied to Azure Storage: {destination_path}")
+    except Exception as e:
+        logger.error(f"Failed to copy log file to Azure: {str(e).splitlines()[0]}")
+
+Step 4: Execution of the Transfer After Processing
+
+Call the function to move logs to the Azure storage container after pipeline execution.
+
+move_log_to_azure("your_storage_account", "your_container_name")
+
+Step 5: Verify Log Transfer
+
+Check the logs in Azure Storage:
+
+display(dbutils.fs.ls("abfss://your_container_name@your_storage_account.dfs.core.windows.net/logging/"))
+
+Summary of Steps:
+	1.	Log Setup:
+	•	Write logs to includes folder.
+	•	Format: %(asctime)s - %(name)s - %(levelname)s - %(message)s
+	•	Handlers:
+	•	FileHandler (for Databricks includes)
+	•	StreamHandler (for console output)
+	2.	Logging Execution:
+	•	Logs are appended from multiple notebooks into the same file.
+	3.	Cloud Backup:
+	•	After execution, copy the log file to Azure Blob Storage.
+
+This approach ensures effective logging across notebooks while maintaining a centralized log file with the desired formatting. Let me know if you have any questions or need further modifications!
+
+
+If you’ve created your notebook inside a custom folder structure in Databricks (e.g., within a Git-linked folder), the DBFS path might not directly correspond to the notebook’s workspace path. Instead, you’ll need to use the correct workspace-relative path or Databricks utility functions to store logs inside your custom folder.
+
+1. Solution Overview
+
+Since you’ve created a structure with multiple folders, it’s better to:
+	1.	Use workspace paths (/Workspace/Repos/...) instead of DBFS paths.
+	2.	Confirm your folder structure by running commands in Databricks.
+	3.	Adjust the logging setup to save logs within your custom folder.
+
+2. Steps to Identify Correct Paths
+
+You can run the following command inside your Databricks notebook to check where your current notebook is located:
+
+import os
+
+print(os.getcwd())  # Get the current working directory
+
+If your notebook is inside a Git-linked repository, you’ll see a path like:
+
+/Workspace/Repos/your-email@example.com/project-name/folder-name
+
+Based on this, your “includes” folder should be accessible using:
+
+log_dir = "/Workspace/Repos/your-email@example.com/project-name/includes/"
+
+To confirm the contents inside your includes folder:
+
+display(dbutils.fs.ls("dbfs:/Workspace/Repos/your-email@example.com/project-name/includes/"))
+
+3. Updated Logger Initialization Function
+
+import logging
+import datetime
+import os
+
+def initialize_logger(notebook_name):
+    # Define correct workspace-based logging directory
+    workspace_path = "/Workspace/Repos/your-email@example.com/project-name/includes/"
+    log_filename = f"pipeline_execution_{datetime.datetime.now().strftime('%Y-%m-%d')}.log"
+    log_file_path = os.path.join(workspace_path, log_filename)
+
+    # Use Databricks Utilities to ensure the folder exists
+    try:
+        dbutils.fs.mkdirs(f"dbfs:{workspace_path}")
+    except Exception as e:
+        print(f"Error creating directory: {e}")
+
+    # Configure logger
+    logger = logging.getLogger("DatabricksPipelineLogger")
+    logger.setLevel(logging.INFO)
+
+    # Avoid duplicate handlers
+    if not logger.handlers:
+        # Create file handler for workspace path
+        file_handler = logging.FileHandler(f"/dbfs{workspace_path}{log_filename}")
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+        # Stream handler for console output
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(stream_handler)
+
+    return logger, log_file_path
+
+4. Using the Logger in Notebooks
+
+v_notebook_name = "bronze_layer_control_table"
+logger, log_file_path = initialize_logger(v_notebook_name)
+
+logger.info("Logging initialized for the notebook.")
+
+try:
+    df = spark.range(10)
+    df.show()
+    logger.info("Data processed successfully.")
+except Exception as e:
+    logger.error(f"Error occurred: {str(e).splitlines()[0]}")
+finally:
+    logger.info("Notebook execution completed.")
+
+5. Moving the Log File to Azure Storage
+
+Once processing is complete, transfer logs to Azure Storage:
+
+def move_log_to_azure(storage_account_name, container_name):
+    workspace_path = "/Workspace/Repos/your-email@example.com/project-name/includes/"
+    log_filename = f"pipeline_execution_{datetime.datetime.now().strftime('%Y-%m-%d')}.log"
+
+    source_path = f"dbfs:{workspace_path}{log_filename}"
+    destination_path = f"abfss://{container_name}@{storage_account_name}.dfs.core.windows.net/logging/{log_filename}"
+
+    try:
+        dbutils.fs.cp(source_path, destination_path)
+        logger.info(f"Log file successfully copied to Azure Storage: {destination_path}")
+    except Exception as e:
+        logger.error(f"Failed to copy log file to Azure: {str(e).splitlines()[0]}")
+
+Call the function:
+
+move_log_to_azure("your_storage_account", "your_container_name")
+
+6. Verification
+
+To check if the log file is correctly stored in the includes folder, run:
+
+display(dbutils.fs.ls("dbfs:/Workspace/Repos/your-email@example.com/project-name/includes/"))
+
+7. Summary of Fixes
+	1.	Identifying the correct workspace path where logs should be saved (/Workspace/Repos/... instead of /dbfs).
+	2.	Ensuring the includes folder exists using dbutils.fs.mkdirs().
+	3.	Writing logs to the correct workspace path, not assuming DBFS paths.
+	4.	Transferring logs to Azure storage after pipeline execution.
+
+Let me know if you need further clarification or assistance!
+
+
+
+
