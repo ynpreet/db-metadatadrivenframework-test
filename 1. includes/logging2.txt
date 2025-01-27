@@ -447,3 +447,48 @@ except Exception as e:
     print(f"Error copying log file to workspace: {str(e)}")
 
 
+
+
+
+
+
+
+
+
+import logging
+import datetime
+import os
+
+# Step 1: Define file paths
+file_date = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+dbfs_dir = "/dbfs/tmp/logs"  # DBFS directory for logs
+log_filename = f"custom_log_{file_date}.log"
+dbfs_log_path = os.path.join(dbfs_dir, log_filename)
+
+adls_dir = "abfss://logging@bauselddevmldnurt.dfs.core.windows.net"
+adls_log_path = f"{adls_dir}/{log_filename}"
+
+# Ensure the DBFS directory exists
+os.makedirs(dbfs_dir, exist_ok=True)
+
+# Step 2: Set up logging
+logger = logging.getLogger("Custom_Log")
+logger.setLevel(logging.DEBUG)
+
+# Create a file handler to write logs to DBFS
+fh = logging.FileHandler(dbfs_log_path, mode="w")
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
+# Log some messages
+logger.info("Logging to DBFS started")
+logger.debug("This is a debug message")
+logger.error("This is an error message")
+
+# Step 3: Upload the log file to ADLS Gen2
+try:
+    dbutils.fs.cp(f"file:{dbfs_log_path}", adls_log_path)
+    print(f"Log file successfully uploaded to ADLS Gen2: {adls_log_path}")
+except Exception as e:
+    print(f"Error uploading log file to ADLS Gen2: {str(e)}")
