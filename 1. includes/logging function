@@ -1,0 +1,103 @@
+Great! Since you’re using %run to execute the function, you don’t need sys.path.append(). Instead, you’ll store your logging_utils.py in a Databricks notebook inside your Git repository and call it using %run.
+
+1️⃣ Create a Shared Logging Notebook
+	1.	Inside your Git repo in Databricks, create a new notebook.
+	2.	Name it Logging_Utils.
+	3.	Paste this code inside Logging_Utils:
+
+# Logging Utilities for Databricks Notebooks
+import logging
+import os
+import datetime
+
+def setup_logger():
+    """
+    Initializes a shared logger for all notebooks.
+    Creates a daily log file in the /tmp/ directory.
+    """
+    logfile_prefix = "my_logger"
+    file_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    log_file_name = f"{logfile_prefix}_{file_date}.log"
+    log_dir = "/tmp/"  # Local storage in Databricks
+    log_file = os.path.join(log_dir, log_file_name)
+
+    # Create logger
+    logger = logging.getLogger("custom_log")
+    logger.setLevel(logging.DEBUG)
+
+    # Check if handlers already exist to avoid duplicate logs
+    if not logger.handlers:
+        file_handler = logging.FileHandler(log_file, mode="a")
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter("%(levelname)s:%(asctime)s:%(message)s")
+        file_handler.setFormatter(formatter)
+        stream_handler.setFormatter(formatter)
+
+        # Add handlers
+        logger.addHandler(file_handler)
+        logger.addHandler(stream_handler)
+
+    return logger, log_file
+
+def push_logs_to_storage():
+    """
+    Moves the daily log file from /tmp/ to Azure Data Lake Storage (ADLS).
+    """
+    # Define storage location
+    storage_path = "abfss://application-logs@<storage_account>.dfs.core.windows.net/logs/"
+
+    # Use the same file name as generated in setup_logger()
+    logfile_prefix = "my_logger"
+    file_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    log_file_name = f"{logfile_prefix}_{file_date}.log"
+    local_log_path = f"/tmp/{log_file_name}"
+    adls_path = f"{storage_path}{log_file_name}"
+
+    # Move log file to storage
+    try:
+        dbutils.fs.mv(f"file:{local_log_path}", adls_path, True)
+        print(f"Log file successfully moved to: {adls_path}")
+    except Exception as e:
+        print(f"Error moving log file: {str(e)}")
+
+2️⃣ Call the Logging Notebook in Your Notebooks
+
+At the top of every notebook, use %run to import the logging functions:
+
+# Run the shared logging notebook
+%run "/Repos/your-git-repo/Logging_Utils"
+
+# Initialize logger
+logger, log_file = setup_logger()
+logger.info("Notebook execution started")
+
+🔹 What Happens Here?
+	•	%run "/Repos/your-git-repo/Logging_Utils" loads the logging functions from Logging_Utils notebook.
+	•	setup_logger() ensures all notebooks log to the same file.
+
+3️⃣ Push Logs to Storage at the End
+
+At the end of the last notebook, move logs to Azure Storage:
+
+push_logs_to_storage()
+
+4️⃣ Commit to Git
+
+Since you are using a Git repo, commit your changes:
+
+git add Logging_Utils
+git commit -m "Added shared logging notebook"
+git push origin main
+
+Now, whenever you clone the repo on a new cluster, your logging setup will work seamlessly.
+
+✅ Why This Approach Works?
+
+✅ No need for sys.path.append() (Since %run directly executes the notebook).
+✅ All notebooks share the same logger and log file per day.
+✅ Easy to maintain, modify, and version-control inside Git.
+✅ Automatically pushes logs to Azure Storage at the end.
+
+Now your logs are structured, centralized, and accessible across all notebooks! 🚀 Let me know if you need any refinements.
