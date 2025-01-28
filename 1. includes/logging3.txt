@@ -43,3 +43,40 @@ except Exception as e:
 
 
 display(spark.read.text('/Workspace/Users/ynpreetinusa@gmail.com/Formulal1onmyown/includes/logging/custom_log_2025-01-27-22-42-48.log'))
+
+
+
+
+
+
+
+import logging
+from azure.storage.fileshare import ShareFileClient
+
+# Define your ADLS Gen2 path
+adls_dir = "abfss://logging@yourstorageaccount.dfs.core.windows.net/yourcontainer"
+
+# Generate the log file path
+file_date = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+log_filename = f"custom_log_{file_date}.log"
+adls_log_path = f"{adls_dir}/{log_filename}"
+
+# Set up the logger
+logger = logging.getLogger("Custom_Log")
+logger.setLevel(logging.DEBUG)
+
+# Use a file handler with the ADLS path
+fh = logging.FileHandler(adls_log_path, mode="w")
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
+# Log some messages
+logger.info("Logging directly to ADLS Gen2 started")
+logger.debug("This is a debug message")
+logger.error("This is an error message")
+
+# Close and flush the file handler
+fh.close()
+logger.removeHandler(fh)
+
