@@ -1,0 +1,45 @@
+import logging
+import time
+import datetime
+import os
+
+# Generate timestamp for the log file name
+file_date = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M-%S')
+
+# Define the directories
+dbfs_dir = "/dbfs/tmp/logs/"  # Temporary DBFS directory for logs
+workspace_dir = "/Workspace/Users/ynpreetinusa@gmail.com/Formulal1onmyown/includes/logging/"  # Workspace directory for logs
+
+# Ensure the DBFS directory exists
+os.makedirs(dbfs_dir, exist_ok=True)
+
+# Define the log file path
+p_filename = f"custom_log_{file_date}.log"
+p_logfile = os.path.join(dbfs_dir, p_filename)
+
+# Print the log file path
+print(p_logfile)
+
+# Create logger
+logger = logging.getLogger("Custom_Log")
+logger.setLevel(logging.DEBUG)
+
+# Create file handler and set formatter
+fh = logging.FileHandler(p_logfile, mode="w")
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
+# Test logging
+logger.info("I am now working")
+
+# Copy the log file to the workspace directory
+try:
+    dbutils.fs.cp(f"file:{p_logfile}", f"{workspace_dir}{p_filename}")
+    print(f"Log file copied to workspace directory: {workspace_dir}{p_filename}")
+except Exception as e:
+    print(f"Error copying log file to workspace: {str(e)}")
+
+
+
+display(spark.read.text('/Workspace/Users/ynpreetinusa@gmail.com/Formulal1onmyown/includes/logging/custom_log_2025-01-27-22-42-48.log'))
