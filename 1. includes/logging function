@@ -215,3 +215,119 @@ push_logs_to_storage()
 
 
 
+You’re correct! Since the logging utility notebook (Logging_Utils) is executed at the top of every notebook, the GLOBAL_TIMESTAMP is regenerated each time, leading to different log filenames.
+
+We need to persist the timestamp across all notebooks so that:
+	1.	All notebooks use the same timestamp for logging.
+	2.	The log filename remains consistent across the workflow.
+	3.	The timestamp is only generated once per workflow execution.
+
+✅ Solution: Store the Timestamp in a Databricks Widget or a Temporary Table
+
+Approach 1: Use Databricks Widget (Recommended)
+	1.	Create the timestamp once and store it in a Databricks widget.
+	2.	Retrieve the timestamp from the widget in every notebook to ensure consistency.
+
+1️⃣ Modify the Logging_Utils Notebook to Initialize Only Once
+
+Modify your Logging_Utils notebook to generate the timestamp only if it doesn’t already exist.
+
+import logging
+import os
+import datetime
+import pyspark.sql.functions as F
+
+# Check if the timestamp is already stored in a Databricks widget
+try:
+    GLOBAL_TIMESTAMP = dbutils.widgets.get("GLOBAL_TIMESTAMP")
+except:
+    # If widget doesn't exist, generate it once
+    GLOBAL_TIMESTAMP = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    dbutils.widgets.text("GLOBAL_TIMESTAMP", GLOBAL_TIMESTAMP)  # Store it in Databricks widget
+
+# Define global log filename
+GLOBAL_LOG_FILE = f"my_logger_{GLOBAL_TIMESTAMP}.log"
+
+def setup_logger():
+    """
+    Initializes a shared logger for all notebooks.
+    Uses a globally consistent log file by reading the timestamp from the widget.
+    """
+    log_dir = "/tmp/"  # Local storage in Databricks
+    log_file = os.path.join(log_dir, GLOBAL_LOG_FILE)  # Use global filename
+
+    # Create logger
+    logger = logging.getLogger("custom_log")
+    logger.setLevel(logging.DEBUG)
+
+    # Check if handlers already exist to avoid duplicate logs
+    if not logger.handlers:
+        file_handler = logging.FileHandler(log_file, mode="a")
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter("%(levelname)s:%(asctime)s:%(message)s")
+        file_handler.setFormatter(formatter)
+        stream_handler.setFormatter(formatter)
+
+        # Add handlers
+        logger.addHandler(file_handler)
+        logger.addHandler(stream_handler)
+
+    return logger, log_file, GLOBAL_LOG_FILE  # Return the consistent log filename
+
+def push_logs_to_storage():
+    """
+    Moves the log file from /tmp/ to Azure Data Lake Storage (ADLS).
+    Uses the globally consistent log filename stored in the widget.
+    """
+    storage_path = "abfss://application-logs@<storage_account>.dfs.core.windows.net/logs/"
+
+    local_log_path = f"/tmp/{GLOBAL_LOG_FILE}"
+    adls_path = f"{storage_path}{GLOBAL_LOG_FILE}"
+
+    # Move log file to storage
+    try:
+        dbutils.fs.mv(f"file:{local_log_path}", adls_path, True)
+        print(f"Log file successfully moved to: {adls_path}")
+    except Exception as e:
+        print(f"Error moving log file: {str(e)}")
+
+2️⃣ Use This in Your Notebooks
+
+At the top of every notebook, use:
+
+# Load the shared logging functions
+%run "/Repos/your-git-repo/Logging_Utils"
+
+# Retrieve the timestamp from the widget
+GLOBAL_TIMESTAMP = dbutils.widgets.get("GLOBAL_TIMESTAMP")
+
+# Initialize the logger (uses the same global log file across all notebooks)
+logger, log_file, GLOBAL_LOG_FILE = setup_logger()
+
+logger.info(f"Notebook execution started. Logging to: {GLOBAL_LOG_FILE}")
+
+3️⃣ Push Logs to Storage at the End
+
+At the end of the last notebook, move the logs to Azure:
+
+push_logs_to_storage()
+
+4️⃣ Verify the Global Timestamp (Optional)
+
+If you want to manually check the timestamp, run:
+
+print(dbutils.widgets.get("GLOBAL_TIMESTAMP"))
+
+✅ Why This Works?
+	•	Ensures all notebooks use the same timestamp for logging ✅
+	•	Log filename remains consistent across the entire workflow ✅
+	•	The timestamp is generated only once per workflow execution ✅
+	•	Persists across multiple notebooks without redefining variables ✅
+
+This approach solves the problem completely and ensures consistent logging across all Databricks notebooks. 🚀 Let me know if you need any modifications!
+
+
+
+
