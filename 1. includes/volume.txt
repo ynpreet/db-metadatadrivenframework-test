@@ -1,0 +1,33 @@
+# Import necessary modules
+from pyspark.sql.utils import AnalysisException
+
+# Hardcoded volume details
+catalog_name = "PH_EMR_CATALOG_DEV"
+schema_name = "logging"
+volume_name = "logging_volume"
+log_file_name = "execution_log.txt"
+
+# Construct volume path
+log_file_path = f"volume://{catalog_name}.{schema_name}.{volume_name}/{log_file_name}"
+
+# Define log content
+log_content = """
+[INFO] Execution started
+[INFO] Processing data...
+[ERROR] Issue found in step XYZ
+"""
+
+# Convert log content into a DataFrame
+log_df = spark.createDataFrame([(log_content,)], ["log"])
+
+# Write logs to Unity Catalog Volume
+log_df.write.mode("overwrite").text(log_file_path)
+print(f"Log file successfully written to: {log_file_path}")
+
+# Verify if logs are written
+try:
+    logs = spark.read.text(log_file_path)
+    print("Log File Content:")
+    logs.show(truncate=False)
+except AnalysisException:
+    print(f"Error: Unable to access log file at {log_file_path}. Check permissions and volume existence.")
