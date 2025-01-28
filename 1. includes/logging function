@@ -101,3 +101,117 @@ Now, whenever you clone the repo on a new cluster, your logging setup will work 
 ✅ Automatically pushes logs to Azure Storage at the end.
 
 Now your logs are structured, centralized, and accessible across all notebooks! 🚀 Let me know if you need any refinements.
+
+
+
+
+
+
+The global log file name should be consistent across all notebooks and should use a single timestamp generated at the start of execution. The best practice is:
+
+Global Log File Naming Convention:
+
+my_logger_YYYY-MM-DD_HH-MM-SS.log
+
+For example:
+
+my_logger_2025-01-28_14-30-15.log
+
+	•	Prefix (my_logger) → Identifies that it’s a log file.
+	•	Date (YYYY-MM-DD) → Ensures logs are organized daily.
+	•	Time (HH-MM-SS) → Helps differentiate log files if multiple runs happen on the same day.
+
+🔹 How to Ensure a Single Global Log File Name
+
+Since multiple notebooks execute separately, we need a single timestamp stored globally.
+
+✅ Store the Log File Name in a Global Variable
+
+Modify Logging_Utils to generate the filename once and store it in GLOBAL_LOG_FILE:
+
+import logging
+import os
+import datetime
+
+# Generate timestamp ONCE when the module is loaded
+GLOBAL_TIMESTAMP = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+GLOBAL_LOG_FILE = f"my_logger_{GLOBAL_TIMESTAMP}.log"
+
+def setup_logger():
+    """
+    Initializes a shared logger for all notebooks.
+    Uses a globally consistent log file.
+    """
+    log_dir = "/tmp/"  # Local storage in Databricks
+    log_file = os.path.join(log_dir, GLOBAL_LOG_FILE)  # Use global filename
+
+    # Create logger
+    logger = logging.getLogger("custom_log")
+    logger.setLevel(logging.DEBUG)
+
+    # Check if handlers already exist to avoid duplicate logs
+    if not logger.handlers:
+        file_handler = logging.FileHandler(log_file, mode="a")
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter("%(levelname)s:%(asctime)s:%(message)s")
+        file_handler.setFormatter(formatter)
+        stream_handler.setFormatter(formatter)
+
+        # Add handlers
+        logger.addHandler(file_handler)
+        logger.addHandler(stream_handler)
+
+    return logger, log_file, GLOBAL_LOG_FILE  # Return the consistent log filename
+
+def push_logs_to_storage():
+    """
+    Moves the log file from /tmp/ to Azure Data Lake Storage (ADLS).
+    Uses the globally consistent log filename.
+    """
+    storage_path = "abfss://application-logs@<storage_account>.dfs.core.windows.net/logs/"
+
+    local_log_path = f"/tmp/{GLOBAL_LOG_FILE}"
+    adls_path = f"{storage_path}{GLOBAL_LOG_FILE}"
+
+    # Move log file to storage
+    try:
+        dbutils.fs.mv(f"file:{local_log_path}", adls_path, True)
+        print(f"Log file successfully moved to: {adls_path}")
+    except Exception as e:
+        print(f"Error moving log file: {str(e)}")
+
+🔹 How to Use This in Your Notebooks
+
+1️⃣ Initialize Logger in Every Notebook
+
+At the top of each notebook, run:
+
+# Load the shared logging functions
+%run "/Repos/your-git-repo/Logging_Utils"
+
+# Initialize the logger (uses a global log file)
+logger, log_file, GLOBAL_LOG_FILE = setup_logger()
+
+logger.info(f"Notebook execution started. Logging to: {GLOBAL_LOG_FILE}")
+
+2️⃣ Push Logs to Storage at the End
+
+At the end of the last notebook, move the logs to Azure:
+
+push_logs_to_storage()
+
+🔹 How This Ensures a Consistent Log File
+	•	All notebooks use the same GLOBAL_LOG_FILE name.
+	•	Prevents mismatches in filenames when pushing logs to storage.
+	•	Every execution session gets a unique log file (identified by timestamp).
+
+✅ Now, all logs across notebooks will be stored in the same file, ensuring consistency! 🚀 Let me know if you need any refinements.
+
+
+
+
+
+
+
