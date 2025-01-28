@@ -1,0 +1,102 @@
+# Import required modules
+from pyspark.sql.utils import AnalysisException
+
+# Define a function to check if a table exists
+def table_exists(table_name):
+    try:
+        spark.sql(f"DESCRIBE TABLE {table_name}")
+        return True
+    except AnalysisException:
+        return False
+
+# Define a function to check if a table contains data for the specified ETL Batch ID
+def check_etl_batch_id(table_name, etl_batch_id, column_name="ETL_Batch_ID"):
+    try:
+        count = spark.sql(f"SELECT COUNT(1) FROM {table_name} WHERE {column_name} = '{etl_batch_id}'").collect()[0][0]
+        return count > 0
+    except Exception as e:
+        print(f"Error checking ETL Batch ID for table {table_name}: {e}")
+        return False
+
+# List of required upstream tables
+required_tables = [
+    "db.vw_ODBC_avct_lnk_ChargeDetail_DiagnosisCodes", 
+    "db.vw_ODBC_mf_DiagnosisCodes", 
+    "db.vw_ODBC_avct_ChargeDetail", 
+    "db.vw_ODBC_appts_Appointments"
+]
+
+# ETL Batch ID to check
+etl_batch_id = "20250127"  # Replace this with the actual batch ID
+
+# Check if all required tables exist
+missing_tables = [table for table in required_tables if not table_exists(table)]
+
+if missing_tables:
+    print(f"The following required tables are missing: {', '.join(missing_tables)}")
+    print("Exiting the notebook as not all required tables exist.")
+    dbutils.notebook.exit("Missing required tables.")
+else:
+    print("All required tables exist. Proceeding to check ETL Batch ID.")
+
+# Check if all tables contain data for the specified ETL Batch ID
+tables_without_batch_id = [
+    table for table in required_tables if not check_etl_batch_id(table, etl_batch_id)
+]
+
+if tables_without_batch_id:
+    print(f"The following tables do not contain data for ETL Batch ID {etl_batch_id}: {', '.join(tables_without_batch_id)}")
+    print("Exiting the notebook as not all tables have updated data.")
+    dbutils.notebook.exit("Tables missing updated ETL Batch ID data.")
+else:
+    print("All required tables contain data for the specified ETL Batch ID. Proceeding with the business logic.")
+
+# Define the query logic
+business_logic_query = f"""
+SELECT 
+    cdc.LicenseKey,
+    cdc.ChargeDetailDiagnosisCode_UID AS Diagnosis_ID,
+    cdc.ChargeDetailFID AS Charge_ID,
+    cdc.VisitFID AS Appointment_ID,
+    cd.PatientFID AS PatientID,
+    ap.ProfileFID AS ProviderID,
+    ap.FacilityFID AS OfficeID,
+    CASE 
+        WHEN cdc.CodeSet = 9 THEN 'ICD-9'
+        WHEN cdc.CodeSet = 10 THEN 'ICD-10'
+        ELSE 'Other'
+    END AS Diagnosis_Code_System,
+    cdc.CodeSequence AS Sequence,
+    cdc.DiagnosisCode_UID AS DiagnosisCode_ID,
+    cdc.DiagnosisCode AS DiagnosisCode,
+    dc.StatementDescription AS DiagnosisCode_Description,
+    dc.CreatedAt AS Diagnosis_Created_Datetime,
+    dc.CreatedBy AS Diagnosis_CreatedBy
+FROM 
+    db.vw_ODBC_avct_lnk_ChargeDetail_DiagnosisCodes cdc
+LEFT JOIN 
+    db.vw_ODBC_mf_DiagnosisCodes dc 
+    ON cdc.DiagnosisCodeFID = dc.DiagnosisCode_UID 
+    AND dc.LicenseKey = cdc.LicenseKey
+LEFT JOIN 
+    db.vw_ODBC_avct_ChargeDetail cd 
+    ON cdc.ChargeDetailFID = cd.ChargeDetail_UID 
+    AND cd.LicenseKey = cdc.LicenseKey
+LEFT JOIN 
+    db.vw_ODBC_appts_Appointments ap 
+    ON cd.VisitFID = ap.Appointment_UID 
+    AND ap.LicenseKey = cd.LicenseKey
+WHERE 
+    cdc.ChargeDetailDiagnosisCode_UID > 1
+    AND cdc.ETL_Batch_ID = '{etl_batch_id}'
+"""
+
+# Execute the business logic query
+result_df = spark.sql(business_logic_query)
+
+# Define the target table name
+target_table = "db.AdvMD_ChargeDiagnosis"
+
+# Insert the data into the target table
+result_df.write.mode("append").saveAsTable(target_table)
+print(f"Records successfully inserted into the table: {target_table}")
