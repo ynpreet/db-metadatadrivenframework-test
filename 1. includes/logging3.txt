@@ -125,4 +125,49 @@ blob_client = blob_service_client.get_blob_client(
 with open(local_log_path, "rb") as data:
     blob_client.upload_blob(data, overwrite=True)
 
-print(f"Log file uploaded to ADLS Gen2 at {folder_name}/{log_filename}")
+print(f"Log file uploaded to ADLS
+ Gen2 at {folder_name}/{log_filename}")
+
+
+
+
+
+import logging
+import os
+import datetime
+
+# Define your ADLS Gen2 path (external location configured via Unity Catalog)
+adls_log_dir = "abfss://<your_external_location>@<your_adls_account_name>.dfs.core.windows.net/logging"
+
+# Generate log file name
+file_date = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+log_filename = f"custom_log_{file_date}.log"
+log_file_path = os.path.join(adls_log_dir, log_filename)
+
+# Print the log file path to verify
+print(f"Log file path: {log_file_path}")
+
+# Set up the logger
+logger = logging.getLogger("Custom_Log")
+logger.setLevel(logging.DEBUG)
+
+# Use a file handler to write directly to ADLS Gen2
+fh = logging.FileHandler(log_file_path, mode="w")
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
+# Log some messages
+logger.info("Logging directly to ADLS Gen2 started")
+logger.debug("This is a debug message")
+logger.error("This is an error message")
+
+# Close and remove the file handler
+fh.close()
+logger.removeHandler(fh)
+
+print("Logging completed successfully.")
+
+
+
+
