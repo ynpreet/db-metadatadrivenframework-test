@@ -80,3 +80,49 @@ logger.error("This is an error message")
 fh.close()
 logger.removeHandler(fh)
 
+
+
+
+import logging
+import datetime
+from azure.storage.blob import BlobServiceClient
+
+# Define your ADLS Gen2 credentials
+connection_string = "your_connection_string"
+container_name = "your_container_name"
+folder_name = "logs"
+
+# Generate log file name
+file_date = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+log_filename = f"custom_log_{file_date}.log"
+local_log_path = f"/dbfs/tmp/{log_filename}"
+
+# Set up the logger
+logger = logging.getLogger("Custom_Log")
+logger.setLevel(logging.DEBUG)
+
+# Configure file handler to write logs locally
+fh = logging.FileHandler(local_log_path, mode="w")
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
+# Log some messages
+logger.info("Logging directly to ADLS Gen2 started")
+logger.debug("This is a debug message")
+logger.error("This is an error message")
+
+# Close the file handler
+fh.close()
+logger.removeHandler(fh)
+
+# Upload the log file to ADLS Gen2
+blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+blob_client = blob_service_client.get_blob_client(
+    container=container_name, blob=f"{folder_name}/{log_filename}"
+)
+
+with open(local_log_path, "rb") as data:
+    blob_client.upload_blob(data, overwrite=True)
+
+print(f"Log file uploaded to ADLS Gen2 at {folder_name}/{log_filename}")
