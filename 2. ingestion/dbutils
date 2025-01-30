@@ -11,3 +11,39 @@ jdbcUrl = f"jdbc:sqlserver://{jdbcHostname}:{jdbcPort};databaseName={jdbcDatabas
 # Read from Azure SQL Database
 empDF = spark.read.format("jdbc").option("url", jdbcUrl).option("dbtable", "dbo.emp").load()
 display(empDF)
+
+
+
+# Fetch entire connection string from Azure Key Vault
+conn_string = dbutils.secrets.get(scope="adf-dev-connection-string", key="adf-rco-dw-connection-string")
+
+# Parse connection string (manually split key-value pairs)
+conn_dict = dict(item.split("=", 1) for item in conn_string.split(";") if "=" in item)
+
+# Extract relevant values
+server_name = conn_dict.get("Server", "").replace("tcp:", "")  # Remove 'tcp:'
+database_name = conn_dict.get("Initial Catalog", "")
+username = conn_dict.get("User ID", "")
+password = conn_dict.get("Password", "")
+
+# Construct JDBC URL
+jdbc_url = f"jdbc:sqlserver://{server_name}:1433;databaseName={database_name};"
+jdbc_url += f"user={username};password={password};encrypt=true;trustServerCertificate=false;"
+
+# Define connection properties
+connection_properties = {
+    "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+}
+
+# Query to fetch table data
+query = """
+    SELECT TABLE_NAME
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_NAME = 'AdvMD_Allergy'
+"""
+
+# Read data from Azure SQL Database
+df = spark.read.jdbc(url=jdbc_url, table=f"({query}) AS table_check", properties=connection_properties)
+
+# Display DataFrame
+display(df)
