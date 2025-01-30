@@ -1,0 +1,72 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.types import *
+import pyspark.sql.functions as F
+
+def create_delta_tables_from_metadata(metadata_table):
+    """
+    Reads metadata from a Delta table and creates multiple Delta tables based on the schema definition.
+    """
+    # Read the metadata Delta table into a DataFrame
+    metadata_df = spark.read.table(metadata_table)
+
+    # Extract unique table names
+    table_names = metadata_df.select("table_name").distinct().collect()
+
+    for row in table_names:
+        table_name = row["table_name"]
+
+        # Filter the metadata for the current table
+        table_metadata = metadata_df.filter(F.col("table_name") == table_name)
+
+        # Define the schema dynamically
+        schema = StructType()
+        partition_columns = []
+
+        for col_row in table_metadata.collect():
+            col_name = col_row["column_name"]
+            data_type = col_row["data_type"].lower()
+            is_nullable = col_row["is_nullable"].strip().lower() == "true"
+            is_partition = col_row["partition_by"].strip().lower() == "true" if col_row["partition_by"] else False
+            
+            # Map data type to PySpark types
+            data_type_mapping = {
+                "int": IntegerType(),
+                "bigint": LongType(),
+                "smallint": ShortType(),
+                "tinyint": ShortType(),
+                "varchar": StringType(),
+                "nvarchar": StringType(),
+                "string": StringType(),
+                "char": StringType(),
+                "boolean": BooleanType(),
+                "float": FloatType(),
+                "double": DoubleType(),
+                "decimal": DecimalType(38, 18),
+                "numeric": DecimalType(38, 18),
+                "timestamp": TimestampType(),
+                "date": DateType(),
+                "datetime": TimestampType()
+            }
+            
+            pyspark_data_type = data_type_mapping.get(data_type, StringType())
+
+            # Append column to schema
+            schema.add(col_name, pyspark_data_type, is_nullable)
+
+            # Collect partition columns
+            if is_partition:
+                partition_columns.append(col_name)
+
+        # Define Delta Table Path
+        delta_table_path = f"dbfs:/mnt/delta/{table_name}"  # Change this as per your storage setup
+        
+        # Create empty Delta table
+        if partition_columns:
+            spark.createDataFrame([], schema).write.format("delta").mode("overwrite") \
+                .option("overwriteSchema", "true").partitionBy(*partition_columns) \
+                .save(delta_table_path)
+        else:
+            spark.createDataFrame([], schema).write.format("delta").mode("overwrite") \
+                .option("overwriteSchema", "true").save(delta_table_path)
+        
+        print(f"Created table: {table_name} at {delta_table_path}")
