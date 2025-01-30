@@ -1,0 +1,13 @@
+# JDBC Connection Definition
+jdbcHostname = dbutils.secrets.get(scope = "akv_secret_demo", key = "jdbcHostname")
+jdbcPort = 1433
+jdbcDatabase = dbutils.secrets.get(scope = "akv_secret_demo", key = "jdbcDatabase")
+jdbcUsername = dbutils.secrets.get(scope = "akv_secret_demo", key = "jdbcUsername")
+jdbcPassword = dbutils.secrets.get(scope = "akv_secret_demo", key = "jdbcPassword")
+
+jdbcDriver = "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+jdbcUrl = f"jdbc:sqlserver://{jdbcHostname}:{jdbcPort};databaseName={jdbcDatabase};user={jdbcUsername};password={jdbcPassword}"
+
+# Read from Azure SQL Database
+empDF = spark.read.format("jdbc").option("url", jdbcUrl).option("dbtable", "dbo.emp").load()
+display(empDF)
