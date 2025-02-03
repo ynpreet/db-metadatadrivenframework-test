@@ -1,3 +1,176 @@
+Databricks Unity Catalog Setup Guide (Step-by-Step for Each Environment: DEV, QA, and PROD)
+
+This guide provides detailed step-by-step instructions for setting up Unity Catalog in Databricks for each environment (DEV, QA, PROD). The setup includes:
+	1.	Creating an Azure Databricks Connector (Prerequisite for External Locations)
+	2.	Creating External Locations (via UI)
+	3.	Creating Catalogs
+	4.	Creating Schemas
+	5.	Granting Permissions to EXL Team (Using your exact code with ‘location’ suffix)
+
+1️⃣ Prerequisite: Create an Azure Databricks Connector (Required for External Locations)
+
+Before creating external locations, we need to create an Azure Databricks Connector to allow Databricks to authenticate with Azure Storage Accounts (ADLS Gen2).
+
+Steps to Create the Databricks Connector
+	1.	Go to Azure Portal → Storage Accounts.
+	2.	Open the Storage Account for your environment:
+	•	DEV → bause1devmdlnudrt
+	•	QA → bause1qamdlnudrt
+	•	PROD → bause1prodmdlnudrt
+	3.	In the left panel, go to Access Control (IAM).
+	4.	Click + Add → Add Role Assignment.
+	5.	Assign the following roles to Azure Databricks Connector:
+	•	Storage Blob Data Contributor
+	•	Storage Blob Data Reader
+	6.	Click Next → Assign Access to Managed Identity.
+	7.	Select the Azure Databricks Connector for the environment:
+	•	DEV → bause1dev-adb-access-connector
+	•	QA → bause1qa-adb-access-connector
+	•	PROD → bause1prod-adb-access-connector
+	8.	Click Next → Review + Assign.
+
+Repeat these steps for all environments.
+
+2️⃣ Setup for DEV Environment (ba-use1-dev-adb-daas)
+
+Step 1: Create External Locations (via UI)
+	1.	Go to Databricks UI → Data → External Locations.
+	2.	Click Create External Location.
+	3.	Fill in the details:
+	•	Name: dev_<container>_location (e.g., dev_bronze_location)
+	•	Storage URL: abfss://<container>@bause1devmdlnudrt.dfs.core.windows.net/
+	•	Credential: Select Databricks Connector → bause1dev-adb-access-connector
+	4.	Click Create.
+	5.	Repeat for all containers.
+
+Step 2: Create the Catalog
+
+CREATE CATALOG PH_EMR_CATALOG_DEV 
+MANAGED LOCATION 'abfss://metastore@bause1devmdlnudrt.dfs.core.windows.net/';
+
+Step 3: Create Schemas
+
+USE CATALOG PH_EMR_CATALOG_DEV;
+
+CREATE SCHEMA logging 
+MANAGED LOCATION 'abfss://logging@bause1devmdlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA metadata 
+MANAGED LOCATION 'abfss://metadata@bause1devmdlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA bronze 
+MANAGED LOCATION 'abfss://bronze@bause1devmdlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA silver 
+MANAGED LOCATION 'abfss://silver@bause1devmdlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA gold 
+MANAGED LOCATION 'abfss://gold@bause1devmdlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA rco-dw 
+MANAGED LOCATION 'abfss://rco-dw@bause1devmdlnudrt.dfs.core.windows.net/';
+
+Step 4: Grant Permissions
+
+GRANT MANAGE ON EXTERNAL LOCATION dev_archive_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION dev_bronze_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION dev_gold_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION dev_landing_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION dev_logging_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION dev_metadata_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION dev_metastore_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION dev_silver_location TO EXL_team;
+
+3️⃣ Setup for QA Environment (ba-use1-qa-adb-daas)
+
+Step 1: Create External Locations (via UI)
+	1.	Go to Databricks UI → Data → External Locations.
+	2.	Click Create External Location.
+	3.	Fill in the details.
+	4.	Repeat for all containers.
+
+Step 2: Create the Catalog
+
+CREATE CATALOG PH_EMR_CATALOG_QA 
+MANAGED LOCATION 'abfss://metastore@bause1qamdlnudrt.dfs.core.windows.net/';
+
+Step 3: Create Schemas
+
+USE CATALOG PH_EMR_CATALOG_QA;
+
+CREATE SCHEMA logging 
+MANAGED LOCATION 'abfss://logging@bause1qamdlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA metadata 
+MANAGED LOCATION 'abfss://metadata@bause1qamdlnudrt.dfs.core.windows.net/';
+
+Step 4: Grant Permissions
+
+GRANT MANAGE ON EXTERNAL LOCATION qa_archive_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION qa_bronze_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION qa_gold_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION qa_landing_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION qa_logging_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION qa_metadata_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION qa_metastore_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION qa_silver_location TO EXL_team;
+
+4️⃣ Setup for PROD Environment (ba-use1-prod-adb-daas)
+
+Step 1: Create External Locations (via UI)
+	1.	Go to Databricks UI → Data → External Locations.
+	2.	Click Create External Location.
+	3.	Fill in the details.
+	4.	Repeat for all containers.
+
+Step 2: Create the Catalog
+
+CREATE CATALOG PH_EMR_CATALOG_PROD 
+MANAGED LOCATION 'abfss://metastore@bause1prodmdlnudrt.dfs.core.windows.net/';
+
+Step 3: Create Schemas
+
+USE CATALOG PH_EMR_CATALOG_PROD;
+
+CREATE SCHEMA logging 
+MANAGED LOCATION 'abfss://logging@bause1prodmdlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA metadata 
+MANAGED LOCATION 'abfss://metadata@bause1prodmdlnudrt.dfs.core.windows.net/';
+
+Step 4: Grant Permissions
+
+GRANT MANAGE ON EXTERNAL LOCATION prod_archive_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION prod_bronze_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION prod_gold_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION prod_landing_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION prod_logging_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION prod_metadata_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION prod_metastore_location TO EXL_team;
+GRANT MANAGE ON EXTERNAL LOCATION prod_silver_location TO EXL_team;
+
+✅ Summary
+
+✔ Databricks Connector created for each Storage Account
+✔ External Locations created via UI with ‘_location’ suffix
+✔ Managed Catalogs & Schemas created
+✔ Permissions granted exactly as you requested
+
+🚀 This ensures a fully configured, scalable, and secure Databricks environment. Let me know if any refinements are needed!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Databricks Unity Catalog Setup Guide (Step-by-Step for Each Environment)
 
 This guide provides detailed step-by-step instructions for setting up Unity Catalog in Databricks for each environment (DEV, QA, PROD). The setup includes:
