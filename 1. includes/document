@@ -1,0 +1,183 @@
+Databricks Unity Catalog Setup Guide (Step-by-Step for Each Environment)
+
+Objective
+
+This guide provides detailed step-by-step instructions for setting up Unity Catalog in Databricks for each environment separately. The setup includes:
+	1.	Creating an Azure Databricks Connector (Prerequisite for External Locations)
+	2.	Creating External Locations (via UI)
+	3.	Creating Catalogs
+	4.	Creating Schemas
+	5.	Granting Permissions to EXL Team
+
+1️⃣ Prerequisite: Create an Azure Databricks Connector (Required for External Locations)
+
+Before creating external locations, we need to create an Azure Databricks Connector. This allows Databricks to authenticate with Azure Storage Accounts (ADLS Gen2).
+
+Steps to Create the Databricks Connector
+	1.	Go to Azure Portal → Storage Accounts.
+	2.	Open the Storage Account for your environment (e.g., badevmadlnudrt for DEV).
+	3.	In the left panel, go to Access Control (IAM).
+	4.	Click + Add → Add Role Assignment.
+	5.	Assign the following roles to Databricks Managed Identity:
+	•	Storage Blob Data Contributor (Allows read & write access)
+	•	Storage Blob Data Reader (Allows read-only access)
+	6.	Click Next → Assign Access to Managed Identity.
+	7.	Select Databricks as the Managed Identity.
+	8.	Click Next → Review + Assign.
+
+Repeat the Above Steps for:
+	•	QA Storage Account (baqamadlnudrt)
+	•	PROD Storage Account (baprodmadlnudrt)
+
+Once the Databricks Connector is created and assigned the correct IAM roles, proceed with creating external locations.
+
+2️⃣ Setup for DEV Environment (ba-db-dev)
+
+Step 1: Create External Locations (via UI)
+	1.	Go to Databricks UI → Data → External Locations.
+	2.	Click Create External Location.
+	3.	Fill in the details:
+	•	Name: dev_<container>_location (e.g., dev_bronze_location)
+	•	Storage URL: abfss://<container>@badevmadlnudrt.dfs.core.windows.net/
+	•	Credential: Select Databricks Connector (created in Step 1).
+	4.	Click Create.
+	5.	Repeat for all containers:
+	•	logging
+	•	metadata
+	•	landing
+	•	bronze
+	•	silver
+	•	gold
+	•	rco-dw
+	•	archive
+	•	metastore
+
+Step 2: Create the Catalog
+
+CREATE CATALOG PH_EMR_DEV_CATALOG 
+MANAGED LOCATION 'abfss://metastore@badevmadlnudrt.dfs.core.windows.net/';
+
+Step 3: Create Schemas
+
+USE CATALOG PH_EMR_DEV_CATALOG;
+
+CREATE SCHEMA logging 
+MANAGED LOCATION 'abfss://logging@badevmadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA metadata 
+MANAGED LOCATION 'abfss://metadata@badevmadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA bronze 
+MANAGED LOCATION 'abfss://bronze@badevmadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA silver 
+MANAGED LOCATION 'abfss://silver@badevmadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA gold 
+MANAGED LOCATION 'abfss://gold@badevmadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA rco-dw 
+MANAGED LOCATION 'abfss://rco-dw@badevmadlnudrt.dfs.core.windows.net/';
+
+Step 4: Grant Permissions
+
+GRANT USAGE ON CATALOG PH_EMR_DEV_CATALOG TO `exl_team`;
+GRANT OWNERSHIP ON ALL SCHEMAS IN CATALOG PH_EMR_DEV_CATALOG TO `exl_team`;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN CATALOG PH_EMR_DEV_CATALOG TO `exl_team`;
+GRANT MODIFY ON ALL SCHEMAS IN CATALOG PH_EMR_DEV_CATALOG TO `exl_team`;
+GRANT READ, WRITE ON EXTERNAL LOCATION dev_bronze_location TO `exl_team`;
+
+3️⃣ Setup for QA Environment (ba-db-qa)
+
+Step 1: Create External Locations (via UI)
+	1.	Go to Databricks UI → Data → External Locations.
+	2.	Click Create External Location.
+	3.	Fill in the details:
+	•	Name: qa_<container>_location (e.g., qa_bronze_location)
+	•	Storage URL: abfss://<container>@baqamadlnudrt.dfs.core.windows.net/
+	•	Credential: Select Databricks Connector.
+	4.	Click Create.
+	5.	Repeat for all containers.
+
+Step 2: Create the Catalog
+
+CREATE CATALOG PH_EMR_QA_CATALOG 
+MANAGED LOCATION 'abfss://metastore@baqamadlnudrt.dfs.core.windows.net/';
+
+Step 3: Create Schemas
+
+USE CATALOG PH_EMR_QA_CATALOG;
+
+CREATE SCHEMA logging 
+MANAGED LOCATION 'abfss://logging@baqamadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA metadata 
+MANAGED LOCATION 'abfss://metadata@baqamadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA bronze 
+MANAGED LOCATION 'abfss://bronze@baqamadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA silver 
+MANAGED LOCATION 'abfss://silver@baqamadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA gold 
+MANAGED LOCATION 'abfss://gold@baqamadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA rco-dw 
+MANAGED LOCATION 'abfss://rco-dw@baqamadlnudrt.dfs.core.windows.net/';
+
+Step 4: Grant Permissions
+
+GRANT USAGE ON CATALOG PH_EMR_QA_CATALOG TO `exl_team`;
+GRANT OWNERSHIP ON ALL SCHEMAS IN CATALOG PH_EMR_QA_CATALOG TO `exl_team`;
+GRANT READ, WRITE ON EXTERNAL LOCATION qa_bronze_location TO `exl_team`;
+
+4️⃣ Setup for PROD Environment (ba-db-prod)
+
+Step 1: Create External Locations (via UI)
+	1.	Go to Databricks UI → Data → External Locations.
+	2.	Click Create External Location.
+	3.	Fill in the details.
+	4.	Repeat for all containers.
+
+Step 2: Create the Catalog
+
+CREATE CATALOG PH_EMR_PROD_CATALOG 
+MANAGED LOCATION 'abfss://metastore@baprodmadlnudrt.dfs.core.windows.net/';
+
+Step 3: Create Schemas
+
+USE CATALOG PH_EMR_PROD_CATALOG;
+
+CREATE SCHEMA logging 
+MANAGED LOCATION 'abfss://logging@baprodmadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA metadata 
+MANAGED LOCATION 'abfss://metadata@baprodmadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA bronze 
+MANAGED LOCATION 'abfss://bronze@baprodmadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA silver 
+MANAGED LOCATION 'abfss://silver@baprodmadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA gold 
+MANAGED LOCATION 'abfss://gold@baprodmadlnudrt.dfs.core.windows.net/';
+
+CREATE SCHEMA rco-dw 
+MANAGED LOCATION 'abfss://rco-dw@baprodmadlnudrt.dfs.core.windows.net/';
+
+Step 4: Grant Permissions
+
+GRANT USAGE ON CATALOG PH_EMR_PROD_CATALOG TO `exl_team`;
+GRANT OWNERSHIP ON ALL SCHEMAS IN CATALOG PH_EMR_PROD_CATALOG TO `exl_team`;
+GRANT READ, WRITE ON EXTERNAL LOCATION prod_bronze_location TO `exl_team`;
+
+✅ Summary
+
+✔ Databricks Connector created for each Storage Account
+✔ External Locations created via UI
+✔ Managed Catalogs & Schemas created
+✔ Permissions granted
+
+This setup ensures secure and controlled access across environments. 🚀 Let me know if you need any refinements!
