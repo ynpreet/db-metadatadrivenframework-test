@@ -1,3 +1,75 @@
+Function to Check If Data Exists for a Given Practice_ETL_ID in ADLS Gen2
+
+This function checks whether any files exist inside the ADLS Gen2 storage for a given Practice_ETL_ID. If no files are found, the notebook exits without execution.
+
+🔹 Steps in the Function
+	1.	List all subdirectories (table folders) inside the Practice_ETL_ID directory.
+	2.	Iterate through each table folder and check if it contains any files.
+	3.	If at least one file is found, allow execution. Otherwise, exit the notebook.
+
+🚀 Function Implementation
+
+def check_data_existence(practice_etl_id):
+    """
+    Checks if any files exist inside the ADLS Gen2 directory for a given Practice_ETL_ID.
+    If no files are found, exits the notebook.
+    
+    :param practice_etl_id: The unique Practice_ETL_ID folder in ADLS Gen2.
+    """
+    
+    # Define the base directory in ADLS Gen2
+    base_path = f"abfss://{v_landing_container}@{v_storage_account_name}.dfs.core.windows.net/Landing/EMR/{practice_etl_id}/"
+    
+    try:
+        # List all subdirectories (table names)
+        table_folders = dbutils.fs.ls(base_path)
+        table_paths = [folder.path for folder in table_folders]  # Extract full paths
+
+        if not table_paths:
+            print(f"⚠️ No subdirectories found under {base_path}. Exiting notebook.")
+            dbutils.notebook.exit("No data available for processing.")
+        
+        # Check if any table folder contains files
+        for table_path in table_paths:
+            try:
+                files = dbutils.fs.ls(table_path)  # List files inside the table folder
+                if files:  # If at least one file exists, continue execution
+                    print(f"✅ Data found in {table_path}. Proceeding with execution.")
+                    return  # Exit function and continue notebook execution
+            except Exception as e:
+                print(f"⚠️ Unable to access {table_path}. Error: {str(e)}")
+
+        # If no files were found in any subdirectory, exit the notebook
+        print(f"🚫 No files found for Practice_ETL_ID {practice_etl_id}. Exiting notebook.")
+        dbutils.notebook.exit("No data available for processing.")
+
+    except Exception as e:
+        print(f"❌ Error accessing ADLS Gen2: {str(e)}")
+        dbutils.notebook.exit("Error checking data existence.")
+
+💡 How It Works
+	1.	Gets the path of Practice_ETL_ID in ADLS Gen2.
+	2.	Lists all directories (table names) inside it.
+	3.	Iterates through each table directory and checks if files exist.
+	4.	If at least one file exists, the notebook continues execution.
+	5.	If no files are found, the notebook exits to avoid unnecessary processing.
+
+📝 Example Usage
+
+practice_etl_id = "16656"  # Example Practice_ETL_ID
+check_data_existence(practice_etl_id)
+
+🔹 Expected Behavior
+
+Scenario	Outcome
+Practice_ETL_ID exists and contains files	✅ Continues execution
+Practice_ETL_ID exists but no files inside	🚫 Exits notebook
+Practice_ETL_ID does not exist in ADLS	❌ Exits with error
+
+This ensures the pipeline only processes data when it’s actually available, making it more efficient. Would you like to extend this function further?
+
+
+
 Databricks Unity Catalog Setup Guide (Step-by-Step for Each Environment: DEV, QA, and PROD)
 
 This guide provides detailed step-by-step instructions for setting up Unity Catalog in Databricks for each environment (DEV, QA, PROD). The setup includes:
