@@ -7,7 +7,13 @@ This guide provides detailed step-by-step instructions for setting up Unity Cata
 	4.	Creating Schemas
 	5.	Granting Permissions to EXL Team (Using your exact code with ‘location’ suffix)
 
-1️⃣ Prerequisite: Create an Azure Databricks Connector (Required for External Locations)
+Assumption: The storage accounts exists for Each Environment: DEV, QA, and PROD. If not created, please create them as mentioned below:
+	•	DEV → bause1devmdlnudrt
+	•	QA → bause1qamdlnudrt
+	•	PROD → bause1prodmdlnudrt
+
+
+1️⃣ Prerequisite: Create an Azure Databricks Connector & Linking it with storage accounts (Required for External Locations)
 
 Before creating external locations, we need to create an Azure Databricks Connector to allow Databricks to authenticate with Azure Storage Accounts (ADLS Gen2).
 
@@ -23,7 +29,7 @@ Steps to Create the Databricks Connector
 	•	Storage Blob Data Contributor
 	•	Storage Blob Data Reader
 	6.	Click Next → Assign Access to Managed Identity.
-	7.	Select the Azure Databricks Connector for the environment:
+	7.	Select the Azure Databricks Connector for the environment. If you have not created it, please create the below connectors:
 	•	DEV → bause1dev-adb-access-connector
 	•	QA → bause1qa-adb-access-connector
 	•	PROD → bause1prod-adb-access-connector
@@ -33,7 +39,22 @@ Repeat these steps for all environments.
 
 2️⃣ Setup for DEV Environment (ba-use1-dev-adb-daas)
 
-Step 1: Create External Locations (via UI)
+
+Step 1: Create following containers in all the storage accounts:
+- archive
+- bronze
+- gold
+- landing
+- logging
+- metadata
+- metastore
+- rco-dw
+- silver
+
+
+Step 2: Create External Locations (via UI) in databricks
+This basically allows databricks woekspace to interact with the containers you created in Step 1 above.
+
 	1.	Go to Databricks UI → Data → External Locations.
 	2.	Click Create External Location.
 	3.	Fill in the details:
